@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ray Notes 2.0</title>
+  
+  <!-- Intégration de l'icône personnalisée -->
+  <link rel="icon" type="image/jpeg" href="logo.jpg">
+  <link rel="apple-touch-icon" href="logo.jpg">
+
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #1e293b 100%);
+      --card-bg: rgba(30, 41, 59, 0.85);
+      --card-border: #334155;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --btn-gradient: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+      --danger-gradient: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+      --agenda-gradient: linear-gradient(135deg, #0d9488 0%, #2563eb 100%);
+      --input-bg: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    
+    body { 
+      background: var(--bg-gradient); 
+      color: var(--text-main); 
+      padding: 20px; 
+      display: flex; 
+      justify-content: center; 
+      min-height: 100vh;
+    }
+
+    .container { width: 100%; max-width: 950px; }
+    .brand-header { text-align: center; margin-bottom: 25px; }
+    .brand-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .brand-subtitle { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
+
+    .card { 
+      background: var(--card-bg); 
+      border: 1px solid var(--card-border); 
+      backdrop-filter: blur(12px);
+      border-radius: 12px; 
+      padding: 24px; 
+      margin-bottom: 20px; 
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    input, textarea, select { 
+      width: 100%; 
+      padding: 12px; 
+      margin-bottom: 14px; 
+      background: var(--input-bg); 
+      border: 1px solid var(--card-border); 
+      color: var(--text-main); 
+      border-radius: 8px; 
+      outline: none;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #8b5cf6; }
+
+    input[type="datetime-local"] {
+      cursor: pointer;
+      color-scheme: dark;
+    }
+
+    button { 
+      background: var(--btn-gradient); 
+      color: #ffffff; 
+      border: none; 
+      padding: 10px 16px; 
+      border-radius: 8px; 
+      cursor: pointer; 
+      font-weight: 600; 
+      transition: opacity 0.2s;
+    }
+    button:hover { opacity: 0.95; }
+    button.danger { background: var(--danger-gradient); }
+    button.secondary { background: #334155; color: var(--text-main); }
+    button.agenda-btn { background: var(--agenda-gradient); width: 100%; margin-bottom: 15px; font-size: 1.05rem; padding: 12px; }
+    button.tiny { padding: 3px 6px; font-size: 0.7rem; border-radius: 4px; opacity: 0.75; }
+    button.tiny:hover { opacity: 1; }
+
+    .hidden { display: none !important; }
+    .actions { display: flex; gap: 15px; flex-wrap: wrap; }
+    .actions button { flex: 1; min-width: 200px; padding: 12px; }
+
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-size: 1rem;
+      color: var(--text-muted);
+    }
+    .breadcrumb span { color: #60a5fa; cursor: pointer; font-weight: 600; }
+    .breadcrumb span:hover { text-decoration: underline; }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 15px;
+    }
+
+    .category-card {
+      position: relative;
+      border-radius: 14px;
+      padding: 24px 20px;
+      cursor: pointer;
+      text-align: center;
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+      overflow: hidden;
+    }
+    .category-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 25px rgba(0,0,0,0.3);
+    }
+    .category-card h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .category-card p { font-size: 0.85rem; opacity: 0.85; }
+
+    .card-actions {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .cat-color-0 { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+    .cat-color-1 { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
+    .cat-color-2 { background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); }
+    .cat-color-3 { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
+    .cat-color-4 { background: linear-gradient(135deg, #f59e0b 0%, #b45309 100%); }
+
+    .note-item { 
+      background: rgba(15, 23, 42, 0.8); 
+      border: 1px solid var(--card-border); 
+      border-radius: 8px; 
+      padding: 16px; 
+      margin-bottom: 12px; 
+    }
+    .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .note-title { font-weight: 700; font-size: 1.1rem; color: #f1f5f9; }
+    .badge { font-size: 0.75rem; background: #7c3aed; color: #fff; padding: 3px 8px; border-radius: 10px; }
+    .badge-agenda { background: #0d9488; }
+    .badge-passed { background: #475569; }
+
+    .images-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+    .note-img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid var(--card-border); cursor: pointer; }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 1000;
+    }
+    .modal-box {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 25px;
+      border-radius: 12px;
+      width: 90%; max-width: 400px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      text-align: center;
+    }
+    .modal-box h3 { margin-bottom: 10px; color: #f8fafc; font-size: 1.2rem; }
+    .modal-box p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="brand-header">
+    <h1 class="brand-title">Ray Notes 2.0</h1>
+    <p class="brand-subtitle">Coffre-Fort Sécurisé & Autonome</p>
+  </div>
+
+  <!-- AUTHENTIFICATION -->
+  <div id="authScreen" class="card">
+    <h2 style="margin-bottom: 10px;">🔐 Authentification</h2>
+    <p style="color: var(--text-muted); margin-bottom: 16px;">Entrez votre mot de passe maître.</p>
+    <input type="password" id="masterPassword" placeholder="Mot de passe maître..." autocomplete="off">
+    <button onclick="unlockVault()" style="width: 100%;">Déverrouiller le Coffre</button>
+    <div id="authStatus" style="color: #ef4444; margin-top: 10px;"></div>
+  </div>
+
+  <!-- CONTENU PRINCIPAL -->
+  <div id="vaultContent" class="hidden">
+    
+    <!-- BARRE D'ACTIONS GLOBALES RÉORGANISÉE -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2>📝 Espace Sécurisé</h2>
+        <button class="danger" onclick="lockVault()">Verrouiller & Quitter</button>
+      </div>
+
+      <!-- Bouton Agenda bien visible juste en dessous -->
+      <button class="agenda-btn" onclick="toggleAgendaView()">📅 <span id="agendaToggleText">Ouvrir l'Agenda & Rappels</span></button>
+
+      <!-- Boutons Exporter et Importer bien espacés -->
+      <div class="actions">
+        <button onclick="exportProtectedTextFile()">📤 Exporter la Sauvegarde</button>
+        <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Importer une Sauvegarde</button>
+        <input type="file" id="importFile" class="hidden" accept=".enc,.txt" onchange="importEncryptedFile(event)">
+      </div>
+    </div>
+
+    <!-- FIL D'ARIANE -->
+    <div class="breadcrumb" id="breadcrumbNav"></div>
+
+    <!-- VUE 1 : CATÉGORIES PRINCIPALES -->
+    <div id="viewCategories" class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3>📁 Vos Catégories</h3>
+      </div>
+      
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+        <input type="text" id="mainCatInput" placeholder="Nom de la catégorie (ex: Comptes, Réseau...)" style="flex: 1; margin-bottom: 0;">
+        <button onclick="saveMainCategory()" id="btnSaveCat">+ Ajouter</button>
+      </div>
+
+      <div class="categories-grid" id="categoriesGrid"></div>
+    </div>
+
+    <!-- VUE 2 : SOUS-CATÉGORIES -->
+    <div id="viewSubCategories" class="card hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h3 id="subCatHeaderTitle">Sous-catégories</h3>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+        <input type="text" id="subCatInput" placeholder="Nom de la sous-catégorie..." style="flex: 1; margin-bottom: 0;">
+        <button onclick="saveSubCategory()" class="secondary">+ Ajouter sous-catégorie</button>
+      </div>
+
+      <div class="categories-grid" id="subCategoriesGrid"></div>
+    </div>
+
+    <!-- VUE 3 : NOTES -->
+    <div id="viewNotes" class="hidden">
+      <div class="card">
+        <h3>➕ Ajouter un enregistrement dans <span id="currentSubCatLabel" style="color: #a78bfa;"></span></h3>
+        <input type="text" id="noteTitle" placeholder="Titre / Identifiant">
+        <textarea id="noteContent" rows="4" placeholder="Informations sensibles..."></textarea>
+        
+        <label style="font-size: 0.85rem; color: var(--text-muted);">Joindre des images / captures d'écran :</label>
+        <input type="file" id="noteImages" accept="image/*" multiple style="margin-top: 5px;">
+
+        <button onclick="saveNote()" style="width: 100%; margin-top: 10px;">Enregistrer dans le Coffre</button>
+      </div>
+
+      <div class="card">
+        <input type="text" id="searchInput" placeholder="🔍 Rechercher dans cette section..." oninput="renderNotes()">
+        <div id="notesContainer" style="margin-top: 15px;"></div>
+      </div>
+    </div>
+
+    <!-- VUE 4 : AGENDA & RAPPELS -->
+    <div id="viewAgenda" class="hidden">
+      <div class="card" style="border-color: #0d9488;">
+        <h3 style="color: #2dd4bf; margin-bottom: 15px;">📅 Planifier un Rappel / Événement</h3>
+        <input type="text" id="agendaTitle" placeholder="Titre de l'événement (ex: Payer abonnement...)">
+        
+        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+          <div style="flex: 1;">
+            <label style="font-size: 0.85rem; color: var(--text-muted);">Sélectionner Date et Heure :</label>
+            <input type="datetime-local" id="agendaDatetime" style="margin-bottom: 0;" onclick="this.showPicker && this.showPicker()">
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 0.85rem; color: var(--text-muted);">Alerte anticipée :</label>
+            <select id="agendaAlertOffset" style="margin-bottom: 0;">
+              <option value="0">À l'heure exacte</option>
+              <option value="5">5 minutes avant</option>
+              <option value="15">15 minutes avant</option>
+              <option value="30">30 minutes avant</option>
+              <option value="60">1 heure avant</option>
+            </select>
+          </div>
+        </div>
+
+        <textarea id="agendaDescription" rows="3" placeholder="Détails..."></textarea>
+        <button onclick="saveAgendaEvent()" style="width: 100%; background: var(--agenda-gradient);">Programmer le Rappel</button>
+      </div>
+
+      <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+          <h3 style="margin-bottom: 0;">⏰ Événements & Rappels</h3>
+          <select id="filterMonthSelect" onchange="renderAgendaEvents()" style="width: auto; margin-bottom: 0; padding: 6px 12px; font-size: 0.85rem;">
+            <option value="all">Tous les mois (Passés & À venir)</option>
+          </select>
+        </div>
+        <div id="agendaContainer"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- POP-UP MODALE PERSONNALISÉE -->
+<div id="customModal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h3 id="modalTitle">⚠️ Sécurité Critique</h3>
+    <p id="modalText">Message de confirmation...</p>
+    <div id="modalInputContainer" style="margin-bottom: 15px;"></div>
+    <div style="display: flex; gap: 10px; justify-content: center;">
+      <button id="modalBtnCancel" class="secondary" onclick="closeModal()">Annuler</button>
+      <button id="modalBtnConfirm" class="danger" onclick="confirmModalAction()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let vaultData = {
+    categories: {
+      "Comptes": { subcats: { "Crypto": [], "Facebook": [] } },
+      "Réseau": { subcats: { "Wi-Fi": [] } }
+    },
+    agenda: []
+  };
+
+  let currentKey = null;
+  let currentMainCat = null;
+  let currentSubCat = null;
+  let isAgendaView = false;
+  let editingCatOriginalName = null;
+  let pendingDeleteCallback = null;
+  let alarmInterval = null;
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && currentKey !== null) {
+      lockVault();
+    }
+  });
+
+  function playAlarmSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.6);
+    } catch (e) {}
+  }
+
+  function startAlarmChecker() {
+    if (alarmInterval) clearInterval(alarmInterval);
+    alarmInterval = setInterval(() => {
+      if (!vaultData.agenda || currentKey === null) return;
+      const now = new Date().getTime();
+
+      vaultData.agenda.forEach(ev => {
+        if (ev.notified) return;
+        const targetTime = new Date(ev.datetime).getTime();
+        const offsetMs = (parseInt(ev.alertOffset) || 0) * 60000;
+        const triggerTime = targetTime - offsetMs;
+
+        if (now >= triggerTime) {
+          ev.notified = true;
+          playAlarmSound();
+          if (Notification.permission === "granted") {
+            new Notification("⏰ Rappel Ray Notes 2.0", { body: ev.title });
+          }
+          alertCustom("⏰ ALARME RAPPEL !", `Événement : ${ev.title}\nPrévu le : ${new Date(ev.datetime).toLocaleString()}`);
+          syncAndRefreshSilent();
+        }
+      });
+    }, 30000);
+  }
+
+  if ("Notification" in window && Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+
+  function showCustomModal(title, text, needsInput, expectedCode, onConfirm) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalText').innerHTML = text;
+    const inputContainer = document.getElementById('modalInputContainer');
+    inputContainer.innerHTML = '';
+
+    if (needsInput) {
+      inputContainer.innerHTML = `<input type="text" id="modalCodeInput" placeholder="Entrez le code : ${expectedCode}" style="text-align: center; font-weight: bold; margin-bottom:0;">`;
+    }
+
+    pendingDeleteCallback = () => {
+      if (needsInput) {
+        const val = document.getElementById('modalCodeInput').value;
+        if (val !== expectedCode.toString()) {
+          alertCustom("❌ Erreur", "Code de sécurité incorrect. Suppression annulée.");
+          return;
+        }
+      }
+      closeModal();
+      onConfirm();
+    };
+
+    document.getElementById('customModal').classList.remove('hidden');
+  }
+
+  function alertCustom(title, text) {
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalText').textContent = text;
+    document.getElementById('modalInputContainer').innerHTML = '';
+    document.getElementById('modalBtnCancel').classList.add('hidden');
+    document.getElementById('modalBtnConfirm').className = '';
+    document.getElementById('modalBtnConfirm').textContent = "OK";
+    pendingDeleteCallback = closeModal;
+    document.getElementById('customModal').classList.remove('hidden');
+  }
+
+  function closeModal() {
+    document.getElementById('customModal').classList.add('hidden');
+    document.getElementById('modalBtnCancel').classList.remove('hidden');
+    document.getElementById('modalBtnConfirm').className = 'danger';
+    document.getElementById('modalBtnConfirm').textContent = "Confirmer";
+  }
+
+  function confirmModalAction() {
+    if (pendingDeleteCallback) pendingDeleteCallback();
+  }
+
+  async function getKey(password, salt) {
+    const enc = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+      keyMaterial,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptData(dataObj, password) {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const key = await getKey(password, salt);
+    const enc = new TextEncoder();
+    const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(JSON.stringify(dataObj)));
+    return { salt: Array.from(salt), iv: Array.from(iv), ciphertext: Array.from(new Uint8Array(encrypted)) };
+  }
+
+  async function decryptData(encryptedPayload, password) {
+    const salt = new Uint8Array(encryptedPayload.salt);
+    const iv = new Uint8Array(encryptedPayload.iv);
+    const ciphertext = new Uint8Array(encryptedPayload.ciphertext);
+    const key = await getKey(password, salt);
+    const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
+    return JSON.parse(new TextDecoder().decode(decrypted));
+  }
+
+  async function unlockVault() {
+    const pwd = document.getElementById('masterPassword').value;
+    const statusDiv = document.getElementById('authStatus');
+    statusDiv.textContent = "";
+
+    if (!pwd) { statusDiv.textContent = "Veuillez entrer votre mot de passe."; return; }
+
+    const rawStored = localStorage.getItem('ray_notes_secure_v6');
+    if (!rawStored) {
+      currentKey = pwd;
+      showVault();
+      return;
+    }
+
+    try {
+      vaultData = await decryptData(JSON.parse(rawStored), pwd);
+      if (!vaultData.agenda) vaultData.agenda = [];
+      currentKey = pwd;
+      showVault();
+    } catch (e) {
+      statusDiv.textContent = "Mot de passe incorrect ou données corrompues.";
+    }
+  }
+
+  function showVault() {
+    document.getElementById('authScreen').classList.add('hidden');
+    document.getElementById('vaultContent').classList.remove('hidden');
+    startAlarmChecker();
+    goToHome();
+  }
+
+  function lockVault() {
+    currentKey = null;
+    vaultData = {};
+    if (alarmInterval) clearInterval(alarmInterval);
+    document.getElementById('masterPassword').value = '';
+    document.getElementById('vaultContent').classList.add('hidden');
+    document.getElementById('authScreen').classList.remove('hidden');
+  }
+
+  function goToHome() {
+    currentMainCat = null;
+    currentSubCat = null;
+    isAgendaView = false;
+    document.getElementById('viewCategories').classList.remove('hidden');
+    document.getElementById('viewSubCategories').classList.add('hidden');
+    document.getElementById('viewNotes').classList.add('hidden');
+    document.getElementById('viewAgenda').classList.add('hidden');
+    document.getElementById('agendaToggleText').textContent = "Ouvrir l'Agenda & Rappels";
+    renderBreadcrumb();
+    renderCategories();
+  }
+
+  function goToSubCategories(mainCat) {
+    currentMainCat = mainCat;
+    currentSubCat = null;
+    isAgendaView = false;
+    document.getElementById('viewCategories').classList.add('hidden');
+    document.getElementById('viewSubCategories').classList.remove('hidden');
+    document.getElementById('viewNotes').classList.add('hidden');
+    document.getElementById('viewAgenda').classList.add('hidden');
+    document.getElementById('agendaToggleText').textContent = "Ouvrir l'Agenda & Rappels";
+    document.getElementById('subCatHeaderTitle').textContent = `Sous-catégories de : ${mainCat}`;
+    renderBreadcrumb();
+    renderSubCategories();
+  }
+
+  function goToNotes(subCat) {
+    currentSubCat = subCat;
+    isAgendaView = false;
+    document.getElementById('viewCategories').classList.add('hidden');
+    document.getElementById('viewSubCategories').classList.add('hidden');
+    document.getElementById('viewNotes').classList.remove('hidden');
+    document.getElementById('viewAgenda').classList.add('hidden');
+    document.getElementById('agendaToggleText').textContent = "Ouvrir l'Agenda & Rappels";
+    document.getElementById('currentSubCatLabel').textContent = `${currentMainCat} > ${subCat}`;
+    renderBreadcrumb();
+    renderNotes();
+  }
+
+  function toggleAgendaView() {
+    if (isAgendaView) {
+      goToHome();
+    } else {
+      isAgendaView = true;
+      document.getElementById('viewCategories').classList.add('hidden');
+      document.getElementById('viewSubCategories').classList.add('hidden');
+      document.getElementById('viewNotes').classList.add('hidden');
+      document.getElementById('viewAgenda').classList.remove('hidden');
+      document.getElementById('agendaToggleText').textContent = "Fermer l'Agenda & Rappels";
+      renderBreadcrumb();
+      populateMonthFilter();
+      renderAgendaEvents();
+    }
+  }
+
+  function renderBreadcrumb() {
+    const nav = document.getElementById('breadcrumbNav');
+    if (isAgendaView) {
+      nav.innerHTML = `<span onclick="goToHome()">Accueil</span> &gt; <span style="color:#2dd4bf;">Calendrier & Rappels</span>`;
+    } else if (!currentMainCat) {
+      nav.innerHTML = `<span>Accueil</span>`;
+    } else if (!currentSubCat) {
+      nav.innerHTML = `<span onclick="goToHome()">Accueil</span> &gt; <span>${currentMainCat}</span>`;
+    } else {
+      nav.innerHTML = `<span onclick="goToHome()">Accueil</span> &gt; <span onclick="goToSubCategories('${currentMainCat}')">${currentMainCat}</span> &gt; <span>${currentSubCat}</span>`;
+    }
+  }
+
+  function secureConfirmDelete(itemName, onDeleteCallback) {
+    const code = Math.floor(1000 + Math.random() * 9000);
+    const text = `Vous êtes sur le point de supprimer définitivement :<br><strong style="color:#f8fafc;">[ ${itemName} ]</strong><br><br>Veuillez saisir le code de sécurité : <span style="color:#60a5fa; font-weight:bold; font-size:1.1rem;">${code}</span>`;
+    showCustomModal("⚠️ Vérification en 2 étapes", text, true, code, onDeleteCallback);
+  }
+
+  async function saveAgendaEvent() {
+    const title = document.getElementById('agendaTitle').value.trim();
+    const datetime = document.getElementById('agendaDatetime').value;
+    const alertOffset = document.getElementById('agendaAlertOffset').value;
+    const description = document.getElementById('agendaDescription').value.trim();
+
+    if (!title || !datetime) return alertCustom("Erreur", "Veuillez saisir un titre et une date/heure.");
+
+    const newEvent = {
+      id: Date.now(),
+      title,
+      datetime,
+      alertOffset,
+      description,
+      notified: false
+    };
+
+    if (!vaultData.agenda) vaultData.agenda = [];
+    vaultData.agenda.push(newEvent);
+    await syncAndRefresh();
+
+    document.getElementById('agendaTitle').value = '';
+    document.getElementById('agendaDatetime').value = '';
+    document.getElementById('agendaDescription').value = '';
+    alertCustom("Succès", "Votre rappel a été programmé avec succès.");
+  }
+
+  function deleteAgendaEvent(eventId) {
+    secureConfirmDelete("ce rappel", () => {
+      vaultData.agenda = vaultData.agenda.filter(ev => ev.id !== eventId);
+      syncAndRefresh();
+    });
+  }
+
+  function populateMonthFilter() {
+    const select = document.getElementById('filterMonthSelect');
+    const currentVal = select.value;
+    select.innerHTML = '<option value="all">Tous les mois (Passés & À venir)</option>';
+
+    const monthsSet = new Set();
+    if (vaultData.agenda) {
+      vaultData.agenda.forEach(ev => {
+        if (ev.datetime) {
+          const yearMonth = ev.datetime.substring(0, 7);
+          monthsSet.add(yearMonth);
+        }
+      });
+    }
+
+    const sortedMonths = Array.from(monthsSet).sort().reverse();
+    sortedMonths.forEach(ym => {
+      const [year, month] = ym.split('-');
+      const dateObj = new Date(year, month - 1, 1);
+      const label = dateObj.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      const opt = document.createElement('option');
+      opt.value = ym;
+      opt.textContent = label.charAt(0).toUpperCase() + label.slice(1);
+      select.appendChild(opt);
+    });
+
+    select.value = currentVal;
+  }
+
+  function renderAgendaEvents() {
+    const container = document.getElementById('agendaContainer');
+    container.innerHTML = '';
+
+    if (!vaultData.agenda || vaultData.agenda.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Aucun rappel programmé.</p>';
+      return;
+    }
+
+    const filterVal = document.getElementById('filterMonthSelect').value;
+    const now = new Date().getTime();
+
+    const filtered = vaultData.agenda.filter(ev => {
+      if (filterVal !== "all") {
+        if (!ev.datetime || !ev.datetime.startsWith(filterVal)) return false;
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Aucun événement pour cette période.</p>';
+      return;
+    }
+
+    const sorted = [...filtered].sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+
+    sorted.forEach(ev => {
+      const el = document.createElement('div');
+      el.className = 'note-item';
+      
+      const targetTime = new Date(ev.datetime).getTime();
+      const isPassed = targetTime < now;
+      el.style.borderColor = isPassed ? '#475569' : '#0d9488';
+      
+      const formattedDate = new Date(ev.datetime).toLocaleString('fr-FR');
+
+      el.innerHTML = `
+        <div class="note-header">
+          <span class="note-title" style="color: ${isPassed ? '#94a3b8' : '#2dd4bf'};">📅 ${escapeHtml(ev.title)}</span>
+          <span class="badge ${isPassed ? 'badge-passed' : 'badge-agenda'}">${formattedDate} ${isPassed ? '(Passé)' : ''}</span>
+        </div>
+        <p style="white-space: pre-wrap; margin-bottom: 8px; color: #cbd5e1;">${escapeHtml(ev.description || 'Aucun détail')}</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <small style="color: var(--text-muted);">Alerte : ${ev.alertOffset == 0 ? "À l'heure exacte" : ev.alertOffset + " min avant"}</small>
+          <button class="danger tiny" style="opacity:1;" onclick="deleteAgendaEvent(${ev.id})">Supprimer</button>
+        </div>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  function saveMainCategory() {
+    const input = document.getElementById('mainCatInput');
+    const name = input.value.trim();
+    if (!name) return;
+
+    if (editingCatOriginalName) {
+      if (name !== editingCatOriginalName && vaultData.categories[name]) return alertCustom("Erreur", "Ce nom existe déjà.");
+      vaultData.categories[name] = vaultData.categories[editingCatOriginalName];
+      if (name !== editingCatOriginalName) delete vaultData.categories[editingCatOriginalName];
+      editingCatOriginalName = null;
+      document.getElementById('btnSaveCat').textContent = "+ Ajouter";
+    } else {
+      if (vaultData.categories[name]) return alertCustom("Erreur", "Cette catégorie existe déjà.");
+      vaultData.categories[name] = { subcats: {} };
+    }
+
+    input.value = '';
+    syncAndRefresh();
+  }
+
+  function editMainCategory(catName) {
+    document.getElementById('mainCatInput').value = catName;
+    editingCatOriginalName = catName;
+    document.getElementById('btnSaveCat').textContent = "Modifier";
+    document.getElementById('mainCatInput').focus();
+  }
+
+  function deleteMainCategory(catName) {
+    secureConfirmDelete(catName, () => {
+      delete vaultData.categories[catName];
+      syncAndRefresh();
+    });
+  }
+
+  function renderCategories() {
+    const grid = document.getElementById('categoriesGrid');
+    grid.innerHTML = '';
+    const cats = Object.keys(vaultData.categories);
+
+    if (cats.length === 0) {
+      grid.innerHTML = '<p style="color: var(--text-muted);">Aucune catégorie. Créez-en une ci-dessus.</p>';
+      return;
+    }
+
+    cats.forEach((cat, index) => {
+      const colorClass = `cat-color-${index % 5}`;
+      const subCount = Object.keys(vaultData.categories[cat].subcats).length;
+
+      const card = document.createElement('div');
+      card.className = `category-card ${colorClass}`;
+      card.onclick = () => goToSubCategories(cat);
+      card.innerHTML = `
+        <div class="card-actions">
+          <button class="tiny secondary" onclick="event.stopPropagation(); editMainCategory('${cat}')">✎</button>
+          <button class="tiny danger" onclick="event.stopPropagation(); deleteMainCategory('${cat}')">✕</button>
+        </div>
+        <h3>📁 ${escapeHtml(cat)}</h3>
+        <p>${subCount} sous-catégorie(s)</p>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  function saveSubCategory() {
+    const input = document.getElementById('subCatInput');
+    const name = input.value.trim();
+    if (!name) return;
+
+    const subcats = vaultData.categories[currentMainCat].subcats;
+    if (subcats[name]) return alertCustom("Erreur", "Cette sous-catégorie existe déjà.");
+
+    subcats[name] = [];
+    input.value = '';
+    syncAndRefreshSub();
+  }
+
+  function deleteSubCategory(subName) {
+    secureConfirmDelete(subName, () => {
+      delete vaultData.categories[currentMainCat].subcats[subName];
+      syncAndRefreshSub();
+    });
+  }
+
+  function renderSubCategories() {
+    const grid = document.getElementById('subCategoriesGrid');
+    grid.innerHTML = '';
+    const subcats = vaultData.categories[currentMainCat].subcats;
+    const names = Object.keys(subcats);
+
+    if (names.length === 0) {
+      grid.innerHTML = '<p style="color: var(--text-muted);">Aucune sous-catégorie. Créez-en une ci-dessus.</p>';
+      return;
+    }
+
+    names.forEach((sub, index) => {
+      const colorClass = `cat-color-${(index + 1) % 5}`;
+      const noteCount = subcats[sub].length;
+
+      const card = document.createElement('div');
+      card.className = `category-card ${colorClass}`;
+      card.onclick = () => goToNotes(sub);
+      card.innerHTML = `
+        <div class="card-actions">
+          <button class="tiny danger" onclick="event.stopPropagation(); deleteSubCategory('${sub}')">✕</button>
+        </div>
+        <h3>📂 ${escapeHtml(sub)}</h3>
+        <p>${noteCount} enregistrement(s)</p>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  async function saveNote() {
+    const title = document.getElementById('noteTitle').value.trim();
+    const content = document.getElementById('noteContent').value.trim();
+    const imgInput = document.getElementById('noteImages');
+
+    if (!title) return alertCustom("Erreur", "Veuillez saisir un titre.");
+
+    let imagesList = [];
+    if (imgInput.files && imgInput.files.length > 0) {
+      for (let i = 0; i < imgInput.files.length; i++) {
+        const base64 = await readFileAsBase64(imgInput.files[i]);
+        imagesList.push(base64);
+      }
+    }
+
+    const newNote = {
+      id: Date.now(),
+      title,
+      content,
+      images: imagesList,
+      date: new Date().toLocaleDateString()
+    };
+
+    vaultData.categories[currentMainCat].subcats[currentSubCat].push(newNote);
+    await syncAndRefreshSub();
+
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteContent').value = '';
+    imgInput.value = '';
+  }
+
+  function deleteNote(noteId) {
+    secureConfirmDelete("cette note", () => {
+      const notes = vaultData.categories[currentMainCat].subcats[currentSubCat];
+      vaultData.categories[currentMainCat].subcats[currentSubCat] = notes.filter(n => n.id !== noteId);
+      syncAndRefreshSub();
+    });
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderNotes() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const container = document.getElementById('notesContainer');
+    container.innerHTML = '';
+
+    const notes = vaultData.categories[currentMainCat].subcats[currentSubCat] || [];
+    const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query));
+
+    if (filtered.length === 0) {
+      container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Aucun enregistrement dans cette section.</p>';
+      return;
+    }
+
+    filtered.forEach(note => {
+      const el = document.createElement('div');
+      el.className = 'note-item';
+      
+      let imgsHtml = '';
+      if (note.images && note.images.length > 0) {
+        imgsHtml = '<div class="images-grid">';
+        note.images.forEach(img => {
+          imgsHtml += `<img src="${img}" class="note-img" onclick="window.open('${img}')" alt="Pièce jointe">`;
+        });
+        imgsHtml += '</div>';
+      }
+
+      el.innerHTML = `
+        <div class="note-header">
+          <span class="note-title">${escapeHtml(note.title)}</span>
+          <span class="badge">${escapeHtml(currentSubCat)}</span>
+        </div>
+        <p style="white-space: pre-wrap; margin-bottom: 8px; color: #cbd5e1;">${escapeHtml(note.content)}</p>
+        ${imgsHtml}
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <small style="color: var(--text-muted);">${note.date}</small>
+          <button class="danger tiny" style="opacity:1;" onclick="deleteNote(${note.id})">Supprimer</button>
+        </div>
+      `;
+      container.appendChild(el);
+    });
+  }
+
+  async function syncAndRefresh() {
+    const encrypted = await encryptData(vaultData, currentKey);
+    localStorage.setItem('ray_notes_secure_v6', JSON.stringify(encrypted));
+    if (isAgendaView) {
+      populateMonthFilter();
+      renderAgendaEvents();
+    } else {
+      renderCategories();
+    }
+  }
+
+  async function syncAndRefreshSilent() {
+    const encrypted = await encryptData(vaultData, currentKey);
+    localStorage.setItem('ray_notes_secure_v6', JSON.stringify(encrypted));
+  }
+
+  async function syncAndRefreshSub() {
+    const encrypted = await encryptData(vaultData, currentKey);
+    localStorage.setItem('ray_notes_secure_v6', JSON.stringify(encrypted));
+    if (currentSubCat) renderNotes();
+    else renderSubCategories();
+  }
+
+  async function exportProtectedTextFile() {
+    const rawStored = localStorage.getItem('ray_notes_secure_v6');
+    if (!rawStored) return alertCustom("Erreur", "Aucune donnée à exporter.");
+    
+    const blob = new Blob([rawStored], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `Ray_Notes_Securise_${new Date().toISOString().slice(0,10)}.enc.txt`;
+    a.click();
+    
+    alertCustom("Succès", "Votre sauvegarde texte chiffrée a été téléchargée avec succès. Elle nécessite votre mot de passe pour être réimportée.");
+  }
+
+  function importEncryptedFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      try {
+        JSON.parse(e.target.result);
+        localStorage.setItem('ray_notes_secure_v6', e.target.result);
+        alertCustom("Succès", "Sauvegarde importée avec succès. Saisissez votre mot de passe pour déverrouiller.");
+        lockVault();
+      } catch (err) {
+        alertCustom("Erreur", "Fichier de sauvegarde invalide.");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function escapeHtml(text) {
+    return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
+  }
+</script>
+</body>
+</html>
