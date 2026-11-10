@@ -27,37 +27,37 @@
     body { 
       background: var(--bg-gradient); 
       color: var(--text-main); 
-      padding: 20px; 
+      padding: 12px; 
       display: flex; 
       justify-content: center; 
       min-height: 100vh;
     }
 
     .container { width: 100%; max-width: 950px; }
-    .brand-header { text-align: center; margin-bottom: 25px; }
+    .brand-header { text-align: center; margin-bottom: 15px; }
     .brand-title {
-      font-size: 2.4rem;
+      font-size: 1.8rem;
       font-weight: 800;
       background: linear-gradient(135deg, #60a5fa 0%, #c084fc 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    .brand-subtitle { color: var(--text-muted); font-size: 0.95rem; margin-top: 4px; }
+    .brand-subtitle { color: var(--text-muted); font-size: 0.85rem; margin-top: 2px; }
 
     .card { 
       background: var(--card-bg); 
       border: 1px solid var(--card-border); 
       backdrop-filter: blur(12px);
       border-radius: 12px; 
-      padding: 24px; 
-      margin-bottom: 20px; 
+      padding: 16px; 
+      margin-bottom: 14px; 
       box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
     }
 
     input, textarea, select { 
       width: 100%; 
-      padding: 12px; 
-      margin-bottom: 14px; 
+      padding: 10px; 
+      margin-bottom: 10px; 
       background: var(--input-bg); 
       border: 1px solid var(--card-border); 
       color: var(--text-main); 
@@ -75,7 +75,7 @@
       background: var(--btn-gradient); 
       color: #ffffff; 
       border: none; 
-      padding: 10px 16px; 
+      padding: 8px 14px; 
       border-radius: 8px; 
       cursor: pointer; 
       font-weight: 600; 
@@ -84,56 +84,57 @@
     button:hover { opacity: 0.95; }
     button.danger { background: var(--danger-gradient); }
     button.secondary { background: #334155; color: var(--text-main); }
-    button.agenda-btn { background: var(--agenda-gradient); width: 100%; margin-bottom: 15px; font-size: 1.05rem; padding: 12px; }
+    button.agenda-btn { background: var(--agenda-gradient); width: 100%; margin-bottom: 10px; font-size: 0.95rem; padding: 10px; }
     button.tiny { padding: 3px 6px; font-size: 0.7rem; border-radius: 4px; opacity: 0.75; }
     button.tiny:hover { opacity: 1; }
 
     .hidden { display: none !important; }
-    .actions { display: flex; gap: 15px; flex-wrap: wrap; }
-    .actions button { flex: 1; min-width: 200px; padding: 12px; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions button { flex: 1; min-width: 140px; padding: 10px; font-size: 0.9rem; }
 
     .breadcrumb {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 20px;
-      font-size: 1rem;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 0.9rem;
       color: var(--text-muted);
     }
     .breadcrumb span { color: #60a5fa; cursor: pointer; font-weight: 600; }
     .breadcrumb span:hover { text-decoration: underline; }
 
+    /* GRILLE COMPACTE POUR MOBILE ET ECAN LARGE */
     .categories-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 18px;
-      margin-top: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+      margin-top: 10px;
     }
 
     .category-card {
       position: relative;
-      border-radius: 14px;
-      padding: 24px 20px;
+      border-radius: 10px;
+      padding: 12px 10px;
       cursor: pointer;
       text-align: center;
       color: #fff;
-      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
       transition: transform 0.2s, box-shadow 0.2s;
       overflow: hidden;
     }
     .category-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 14px 25px rgba(0,0,0,0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.3);
     }
-    .category-card h3 { font-size: 1.4rem; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
-    .category-card p { font-size: 0.85rem; opacity: 0.85; }
+    .category-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 4px; letter-spacing: 0.3px; word-break: break-word; }
+    .category-card p { font-size: 0.75rem; opacity: 0.85; }
 
     .card-actions {
       position: absolute;
-      top: 10px;
-      right: 10px;
+      top: 6px;
+      right: 6px;
       display: flex;
-      gap: 4px;
+      gap: 3px;
     }
 
     .cat-color-0 { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
@@ -146,17 +147,17 @@
       background: rgba(15, 23, 42, 0.8); 
       border: 1px solid var(--card-border); 
       border-radius: 8px; 
-      padding: 16px; 
-      margin-bottom: 12px; 
+      padding: 12px; 
+      margin-bottom: 10px; 
     }
-    .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .note-title { font-weight: 700; font-size: 1.1rem; color: #f1f5f9; }
-    .badge { font-size: 0.75rem; background: #7c3aed; color: #fff; padding: 3px 8px; border-radius: 10px; }
+    .note-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .note-title { font-weight: 700; font-size: 1rem; color: #f1f5f9; }
+    .badge { font-size: 0.7rem; background: #7c3aed; color: #fff; padding: 2px 6px; border-radius: 8px; }
     .badge-agenda { background: #0d9488; }
     .badge-passed { background: #475569; }
 
-    .images-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-    .note-img { width: 100px; height: 100px; object-fit: cover; border-radius: 6px; border: 1px solid var(--card-border); cursor: pointer; }
+    .images-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .note-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--card-border); cursor: pointer; }
 
     .modal-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -168,14 +169,14 @@
     .modal-box {
       background: #1e293b;
       border: 1px solid #475569;
-      padding: 25px;
+      padding: 20px;
       border-radius: 12px;
-      width: 90%; max-width: 400px;
+      width: 90%; max-width: 380px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5);
       text-align: center;
     }
-    .modal-box h3 { margin-bottom: 10px; color: #f8fafc; font-size: 1.2rem; }
-    .modal-box p { color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px; line-height: 1.4; }
+    .modal-box h3 { margin-bottom: 8px; color: #f8fafc; font-size: 1.1rem; }
+    .modal-box p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 12px; line-height: 1.3; }
   </style>
 </head>
 <body>
@@ -189,30 +190,30 @@
 
   <!-- AUTHENTIFICATION -->
   <div id="authScreen" class="card">
-    <h2 style="margin-bottom: 10px;">🔐 Authentification</h2>
-    <p style="color: var(--text-muted); margin-bottom: 16px;">Entrez votre mot de passe maître.</p>
+    <h2 style="margin-bottom: 8px; font-size: 1.2rem;">🔐 Authentification</h2>
+    <p style="color: var(--text-muted); margin-bottom: 14px; font-size: 0.9rem;">Entrez votre mot de passe maître.</p>
     <input type="password" id="masterPassword" placeholder="Mot de passe maître..." autocomplete="off">
     <button onclick="unlockVault()" style="width: 100%;">Déverrouiller le Coffre</button>
-    <div id="authStatus" style="color: #ef4444; margin-top: 10px;"></div>
+    <div id="authStatus" style="color: #ef4444; margin-top: 8px; font-size: 0.85rem;"></div>
   </div>
 
   <!-- CONTENU PRINCIPAL -->
   <div id="vaultContent" class="hidden">
     
-    <!-- BARRE D'ACTIONS GLOBALES RÉORGANISÉE -->
+    <!-- BARRE D'ACTIONS GLOBALES -->
     <div class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h2>📝 Espace Sécurisé</h2>
-        <button class="danger" onclick="lockVault()">Verrouiller & Quitter</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h2 style="font-size: 1.1rem;">📝 Espace Sécurisé</h2>
+        <button class="danger tiny" style="padding: 6px 10px; font-size: 0.8rem;" onclick="lockVault()">Verrouiller & Quitter</button>
       </div>
 
-      <!-- Bouton Agenda bien visible juste en dessous -->
+      <!-- Bouton Agenda -->
       <button class="agenda-btn" onclick="toggleAgendaView()">📅 <span id="agendaToggleText">Ouvrir l'Agenda & Rappels</span></button>
 
-      <!-- Boutons Exporter et Importer bien espacés -->
+      <!-- Boutons Exporter et Importer -->
       <div class="actions">
-        <button onclick="exportProtectedTextFile()">📤 Exporter la Sauvegarde</button>
-        <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Importer une Sauvegarde</button>
+        <button onclick="exportProtectedTextFile()">📤 Exporter</button>
+        <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Importer</button>
         <input type="file" id="importFile" class="hidden" accept=".enc,.txt" onchange="importEncryptedFile(event)">
       </div>
     </div>
@@ -222,12 +223,12 @@
 
     <!-- VUE 1 : CATÉGORIES PRINCIPALES -->
     <div id="viewCategories" class="card">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3>📁 Vos Catégories</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="font-size: 1rem;">📁 Vos Catégories</h3>
       </div>
       
-      <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
-        <input type="text" id="mainCatInput" placeholder="Nom de la catégorie (ex: Comptes, Réseau...)" style="flex: 1; margin-bottom: 0;">
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
+        <input type="text" id="mainCatInput" placeholder="Nom de la catégorie..." style="flex: 1; margin-bottom: 0;">
         <button onclick="saveMainCategory()" id="btnSaveCat">+ Ajouter</button>
       </div>
 
@@ -236,13 +237,13 @@
 
     <!-- VUE 2 : SOUS-CATÉGORIES -->
     <div id="viewSubCategories" class="card hidden">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-        <h3 id="subCatHeaderTitle">Sous-catégories</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 id="subCatHeaderTitle" style="font-size: 1rem;">Sous-catégories</h3>
       </div>
 
-      <div style="display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;">
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap;">
         <input type="text" id="subCatInput" placeholder="Nom de la sous-catégorie..." style="flex: 1; margin-bottom: 0;">
-        <button onclick="saveSubCategory()" class="secondary">+ Ajouter sous-catégorie</button>
+        <button onclick="saveSubCategory()" class="secondary">+ Ajouter</button>
       </div>
 
       <div class="categories-grid" id="subCategoriesGrid"></div>
@@ -251,35 +252,35 @@
     <!-- VUE 3 : NOTES -->
     <div id="viewNotes" class="hidden">
       <div class="card">
-        <h3>➕ Ajouter un enregistrement dans <span id="currentSubCatLabel" style="color: #a78bfa;"></span></h3>
+        <h3 style="font-size: 1rem; margin-bottom: 10px;">➕ Enregistrement dans <span id="currentSubCatLabel" style="color: #a78bfa;"></span></h3>
         <input type="text" id="noteTitle" placeholder="Titre / Identifiant">
-        <textarea id="noteContent" rows="4" placeholder="Informations sensibles..."></textarea>
+        <textarea id="noteContent" rows="3" placeholder="Informations sensibles..."></textarea>
         
-        <label style="font-size: 0.85rem; color: var(--text-muted);">Joindre des images / captures d'écran :</label>
-        <input type="file" id="noteImages" accept="image/*" multiple style="margin-top: 5px;">
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Joindre des images :</label>
+        <input type="file" id="noteImages" accept="image/*" multiple style="margin-top: 4px;">
 
-        <button onclick="saveNote()" style="width: 100%; margin-top: 10px;">Enregistrer dans le Coffre</button>
+        <button onclick="saveNote()" style="width: 100%; margin-top: 6px;">Enregistrer dans le Coffre</button>
       </div>
 
       <div class="card">
         <input type="text" id="searchInput" placeholder="🔍 Rechercher dans cette section..." oninput="renderNotes()">
-        <div id="notesContainer" style="margin-top: 15px;"></div>
+        <div id="notesContainer" style="margin-top: 10px;"></div>
       </div>
     </div>
 
     <!-- VUE 4 : AGENDA & RAPPELS -->
     <div id="viewAgenda" class="hidden">
       <div class="card" style="border-color: #0d9488;">
-        <h3 style="color: #2dd4bf; margin-bottom: 15px;">📅 Planifier un Rappel / Événement</h3>
-        <input type="text" id="agendaTitle" placeholder="Titre de l'événement (ex: Payer abonnement...)">
+        <h3 style="color: #2dd4bf; margin-bottom: 12px; font-size: 1rem;">📅 Planifier un Rappel / Événement</h3>
+        <input type="text" id="agendaTitle" placeholder="Titre de l'événement...">
         
-        <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px;">
           <div style="flex: 1;">
-            <label style="font-size: 0.85rem; color: var(--text-muted);">Sélectionner Date et Heure :</label>
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Date & Heure :</label>
             <input type="datetime-local" id="agendaDatetime" style="margin-bottom: 0;" onclick="this.showPicker && this.showPicker()">
           </div>
           <div style="flex: 1;">
-            <label style="font-size: 0.85rem; color: var(--text-muted);">Alerte anticipée :</label>
+            <label style="font-size: 0.8rem; color: var(--text-muted);">Alerte :</label>
             <select id="agendaAlertOffset" style="margin-bottom: 0;">
               <option value="0">À l'heure exacte</option>
               <option value="5">5 minutes avant</option>
@@ -290,15 +291,15 @@
           </div>
         </div>
 
-        <textarea id="agendaDescription" rows="3" placeholder="Détails..."></textarea>
+        <textarea id="agendaDescription" rows="2" placeholder="Détails..."></textarea>
         <button onclick="saveAgendaEvent()" style="width: 100%; background: var(--agenda-gradient);">Programmer le Rappel</button>
       </div>
 
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
-          <h3 style="margin-bottom: 0;">⏰ Événements & Rappels</h3>
-          <select id="filterMonthSelect" onchange="renderAgendaEvents()" style="width: auto; margin-bottom: 0; padding: 6px 12px; font-size: 0.85rem;">
-            <option value="all">Tous les mois (Passés & À venir)</option>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="margin-bottom: 0; font-size: 1rem;">⏰ Événements & Rappels</h3>
+          <select id="filterMonthSelect" onchange="renderAgendaEvents()" style="width: auto; margin-bottom: 0; padding: 4px 8px; font-size: 0.8rem;">
+            <option value="all">Tous les mois</option>
           </select>
         </div>
         <div id="agendaContainer"></div>
@@ -314,8 +315,8 @@
   <div class="modal-box">
     <h3 id="modalTitle">⚠️ Sécurité Critique</h3>
     <p id="modalText">Message de confirmation...</p>
-    <div id="modalInputContainer" style="margin-bottom: 15px;"></div>
-    <div style="display: flex; gap: 10px; justify-content: center;">
+    <div id="modalInputContainer" style="margin-bottom: 12px;"></div>
+    <div style="display: flex; gap: 8px; justify-content: center;">
       <button id="modalBtnCancel" class="secondary" onclick="closeModal()">Annuler</button>
       <button id="modalBtnConfirm" class="danger" onclick="confirmModalAction()">Confirmer</button>
     </div>
@@ -577,8 +578,8 @@
 
   function secureConfirmDelete(itemName, onDeleteCallback) {
     const code = Math.floor(1000 + Math.random() * 9000);
-    const text = `Vous êtes sur le point de supprimer définitivement :<br><strong style="color:#f8fafc;">[ ${itemName} ]</strong><br><br>Veuillez saisir le code de sécurité : <span style="color:#60a5fa; font-weight:bold; font-size:1.1rem;">${code}</span>`;
-    showCustomModal("⚠️ Vérification en 2 étapes", text, true, code, onDeleteCallback);
+    const text = `Vous êtes sur le point de supprimer définitivement :<br><strong style="color:#f8fafc;">[ ${itemName} ]</strong><br><br>Saisir le code : <span style="color:#60a5fa; font-weight:bold; font-size:1.1rem;">${code}</span>`;
+    showCustomModal("⚠️ Confirmation", text, true, code, onDeleteCallback);
   }
 
   async function saveAgendaEvent() {
@@ -605,7 +606,7 @@
     document.getElementById('agendaTitle').value = '';
     document.getElementById('agendaDatetime').value = '';
     document.getElementById('agendaDescription').value = '';
-    alertCustom("Succès", "Votre rappel a été programmé avec succès.");
+    alertCustom("Succès", "Votre rappel a été programmé.");
   }
 
   function deleteAgendaEvent(eventId) {
@@ -618,7 +619,7 @@
   function populateMonthFilter() {
     const select = document.getElementById('filterMonthSelect');
     const currentVal = select.value;
-    select.innerHTML = '<option value="all">Tous les mois (Passés & À venir)</option>';
+    select.innerHTML = '<option value="all">Tous les mois</option>';
 
     const monthsSet = new Set();
     if (vaultData.agenda) {
@@ -686,8 +687,8 @@
           <span class="badge ${isPassed ? 'badge-passed' : 'badge-agenda'}">${formattedDate} ${isPassed ? '(Passé)' : ''}</span>
         </div>
         <p style="white-space: pre-wrap; margin-bottom: 8px; color: #cbd5e1;">${escapeHtml(ev.description || 'Aucun détail')}</p>
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-          <small style="color: var(--text-muted);">Alerte : ${ev.alertOffset == 0 ? "À l'heure exacte" : ev.alertOffset + " min avant"}</small>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+          <small style="color: var(--text-muted);">Alerte : ${ev.alertOffset == 0 ? "À l'heure" : ev.alertOffset + " min avant"}</small>
           <button class="danger tiny" style="opacity:1;" onclick="deleteAgendaEvent(${ev.id})">Supprimer</button>
         </div>
       `;
@@ -752,7 +753,7 @@
           <button class="tiny danger" onclick="event.stopPropagation(); deleteMainCategory('${cat}')">✕</button>
         </div>
         <h3>📁 ${escapeHtml(cat)}</h3>
-        <p>${subCount} sous-catégorie(s)</p>
+        <p>${subCount} sous-cat.</p>
       `;
       grid.appendChild(card);
     });
@@ -801,7 +802,7 @@
           <button class="tiny danger" onclick="event.stopPropagation(); deleteSubCategory('${sub}')">✕</button>
         </div>
         <h3>📂 ${escapeHtml(sub)}</h3>
-        <p>${noteCount} enregistrement(s)</p>
+        <p>${noteCount} note(s)</p>
       `;
       grid.appendChild(card);
     });
@@ -888,7 +889,7 @@
         </div>
         <p style="white-space: pre-wrap; margin-bottom: 8px; color: #cbd5e1;">${escapeHtml(note.content)}</p>
         ${imgsHtml}
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
           <small style="color: var(--text-muted);">${note.date}</small>
           <button class="danger tiny" style="opacity:1;" onclick="deleteNote(${note.id})">Supprimer</button>
         </div>
@@ -930,7 +931,7 @@
     a.download = `Ray_Notes_Securise_${new Date().toISOString().slice(0,10)}.enc.txt`;
     a.click();
     
-    alertCustom("Succès", "Votre sauvegarde texte chiffrée a été téléchargée avec succès. Elle nécessite votre mot de passe pour être réimportée.");
+    alertCustom("Succès", "Sauvegarde texte chiffrée téléchargée.");
   }
 
   function importEncryptedFile(event) {
@@ -941,7 +942,7 @@
       try {
         JSON.parse(e.target.result);
         localStorage.setItem('ray_notes_secure_v6', e.target.result);
-        alertCustom("Succès", "Sauvegarde importée avec succès. Saisissez votre mot de passe pour déverrouiller.");
+        alertCustom("Succès", "Sauvegarde importée avec succès. Saisissez votre mot de passe.");
         lockVault();
       } catch (err) {
         alertCustom("Erreur", "Fichier de sauvegarde invalide.");
