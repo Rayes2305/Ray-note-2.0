@@ -193,7 +193,9 @@
     <h2 style="margin-bottom: 8px; font-size: 1.2rem;">🔐 Authentification</h2>
     <p style="color: var(--text-muted); margin-bottom: 14px; font-size: 0.9rem;">Entrez votre mot de passe maître.</p>
     <input type="password" id="masterPassword" placeholder="Mot de passe maître..." autocomplete="off">
-    <button onclick="unlockVault()" style="width: 100%;">Déverrouiller le Coffre</button>
+    <input type="password" id="confirmPassword" class="hidden" placeholder="Confirmer le mot de passe..." autocomplete="off">
+    <p id="authHint" class="hidden" style="color: var(--text-muted); margin-bottom: 10px; font-size: 0.85rem;">Premier lancement : choisissez votre mot de passe maître (6 caractères minimum). Il est impossible à récupérer en cas d'oubli.</p>
+    <button id="unlockBtn" onclick="unlockVault()" style="width: 100%;">Déverrouiller le Coffre</button>
     <div id="authStatus" style="color: #ef4444; margin-top: 8px; font-size: 0.85rem;"></div>
   </div>
 
@@ -215,7 +217,9 @@
         <button onclick="exportProtectedTextFile()">📤 Exporter</button>
         <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Importer</button>
         <input type="file" id="importFile" class="hidden" accept=".enc,.txt" onchange="importEncryptedFile(event)">
+        <button onclick="exportPDF()">📄 Export PDF sécurisé</button>
       </div>
+      <input type="password" id="pdfPassword" placeholder="Mot de passe du PDF (vide = mot de passe maître)" autocomplete="off" style="margin-top:10px;">
     </div>
 
     <!-- FIL D'ARIANE -->
@@ -323,6 +327,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
   let vaultData = {
     categories: {
@@ -341,10 +346,12 @@
   let alarmInterval = null;
 
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden && currentKey !== null) {
+    if (document.hidden && currentKey !== null && !window.__filePicking) {
       lockVault();
     }
+    if (!document.hidden) setTimeout(() => { window.__filePicking = false; }, 1500);
   });
+  document.addEventListener("click", e => { if (e.target.type === "file") window.__filePicking = true; }, true);
 
   function playAlarmSound() {
     try {
@@ -476,7 +483,15 @@
 
     const rawStored = localStorage.getItem('ray_notes_secure_v6');
     if (!rawStored) {
+      const conf = document.getElementById('confirmPassword').value;
+      if (pwd.length < 6) { statusDiv.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
+      if (pwd !== conf) { statusDiv.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+      vaultData = {
+        categories: { "Comptes": { subcats: { "Crypto": [], "Facebook": [] } }, "Réseau": { subcats: { "Wi-Fi": [] } } },
+        agenda: []
+      };
       currentKey = pwd;
+      await syncAndRefreshSilent();
       showVault();
       return;
     }
@@ -491,7 +506,15 @@
     }
   }
 
+  function updateAuthMode() {
+    const isNew = !localStorage.getItem('ray_notes_secure_v6');
+    document.getElementById('confirmPassword').classList.toggle('hidden', !isNew);
+    document.getElementById('authHint').classList.toggle('hidden', !isNew);
+    document.getElementById('unlockBtn').textContent = isNew ? 'Créer mon coffre' : 'Déverrouiller le Coffre';
+  }
+
   function showVault() {
+    document.getElementById('confirmPassword').value = '';
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('vaultContent').classList.remove('hidden');
     startAlarmChecker();
@@ -503,8 +526,10 @@
     vaultData = {};
     if (alarmInterval) clearInterval(alarmInterval);
     document.getElementById('masterPassword').value = '';
+    document.getElementById('confirmPassword').value = '';
     document.getElementById('vaultContent').classList.add('hidden');
     document.getElementById('authScreen').classList.remove('hidden');
+    updateAuthMode();
   }
 
   function goToHome() {
@@ -925,11 +950,7 @@
     const rawStored = localStorage.getItem('ray_notes_secure_v6');
     if (!rawStored) return alertCustom("Erreur", "Aucune donnée à exporter.");
     
-    const blob = new Blob([rawStored], { type: 'text/plain;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `Ray_Notes_Securise_${new Date().toISOString().slice(0,10)}.enc.txt`;
-    a.click();
+    await saveBlob(`Ray_Notes_Securise_${new Date().toISOString().slice(0,10)}.enc.txt`, new Blob([rawStored], { type: 'text/plain;charset=utf-8' }));
     
     alertCustom("Succès", "Sauvegarde texte chiffrée téléchargée.");
   }
@@ -951,9 +972,111 @@
     reader.readAsText(file);
   }
 
+  // ===== Enregistrement de fichier (APK + navigateur) =====
+  async function saveBlob(name, blob) {
+    if (window.AndroidSaver) {
+      const b64 = await new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result.split(',')[1]); f.readAsDataURL(blob); });
+      AndroidSaver.saveFile(name, b64, blob.type || 'application/octet-stream');
+    } else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    }
+  }
+
+  // ===== Export PDF protégé =====
+  function pdfSafe(t) {
+    return String(t || '').replace(/\r/g, '').replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+      .replace(/[–—]/g, '-').replace(/…/g, '...').replace(/[^\n\t\u0020-\u007E\u00A0-\u00FF]/g, '');
+  }
+
+  function imgToJpeg(src) {
+    return new Promise(res => {
+      const im = new Image();
+      im.onload = () => {
+        const sc = Math.min(1, 1200 / Math.max(im.width, im.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+        const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+        x.drawImage(im, 0, 0, c.width, c.height);
+        res({ data: c.toDataURL('image/jpeg', 0.8), w: c.width, h: c.height });
+      };
+      im.onerror = () => res(null);
+      im.src = src;
+    });
+  }
+
+  async function exportPDF() {
+    if (currentKey === null) return;
+    if (!window.jspdf) return alertCustom("Erreur", "Librairie PDF non chargée (connexion Internet requise).");
+    const pwdField = document.getElementById('pdfPassword');
+    const pwd = pwdField.value || currentKey;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a4', encryption: {
+      userPassword: pwd, ownerPassword: pwd + '#' + Math.random().toString(36).slice(2), userPermissions: ['print'] } });
+    const L = 15, W = 180, BAS = 278;
+    let y = 20;
+    const room = h => { if (y + h > BAS) { doc.addPage(); y = 20; } };
+    const para = (txt, size, style, color, lh) => {
+      doc.setFont('helvetica', style); doc.setFontSize(size); doc.setTextColor(...color);
+      doc.splitTextToSize(pdfSafe(txt), W).forEach(l => { room(lh); doc.text(l, L, y); y += lh; });
+    };
+
+    para('Ray Notes - Sauvegarde', 20, 'bold', [0, 0, 0], 9);
+    para('Exporté le ' + new Date().toLocaleString('fr-FR'), 10, 'normal', [120, 120, 120], 6);
+    y += 6;
+
+    for (const [cat, cv] of Object.entries(vaultData.categories || {})) {
+      room(24); y += 4;
+      para(cat, 16, 'bold', [29, 78, 216], 8);
+      for (const [sub, notes] of Object.entries(cv.subcats || {})) {
+        room(16);
+        para(cat + ' > ' + sub, 12, 'bold', [71, 85, 105], 7);
+        if (!notes.length) para('(aucune note)', 10, 'italic', [150, 150, 150], 5.5);
+        for (const n of notes) {
+          room(20); y += 2;
+          para(n.title, 12, 'bold', [0, 0, 0], 6);
+          if (n.date) para(n.date, 9, 'italic', [130, 130, 130], 5);
+          para(n.content, 11, 'normal', [30, 30, 30], 5.3);
+          for (const src of (n.images || [])) {
+            const im = await imgToJpeg(src);
+            if (!im) continue;
+            let w = Math.min(W, 120), h = w * im.h / im.w;
+            if (h > BAS - 30) { h = BAS - 30; w = h * im.w / im.h; }
+            room(h + 4); doc.addImage(im.data, 'JPEG', L, y, w, h); y += h + 4;
+          }
+          y += 3; room(4); doc.setDrawColor(210); doc.line(L, y, L + W, y); y += 6;
+        }
+      }
+    }
+
+    const ag = vaultData.agenda || [];
+    if (ag.length) {
+      doc.addPage(); y = 20;
+      para('Agenda & Rappels', 16, 'bold', [29, 78, 216], 8); y += 2;
+      ag.slice().sort((a, b) => a.datetime.localeCompare(b.datetime)).forEach(e => {
+        room(18);
+        para(e.title + ' - ' + e.datetime.replace('T', ' '), 11, 'bold', [0, 0, 0], 6);
+        if (e.description) para(e.description, 10, 'normal', [60, 60, 60], 5);
+        y += 3;
+      });
+    }
+
+    const total = doc.getNumberOfPages();
+    for (let p = 1; p <= total; p++) {
+      doc.setPage(p); doc.setFontSize(9); doc.setTextColor(150, 150, 150);
+      doc.text('Page ' + p + ' / ' + total, 105, 290, { align: 'center' });
+    }
+
+    await saveBlob('Ray_Notes_' + new Date().toISOString().slice(0, 10) + '.pdf', doc.output('blob'));
+    pwdField.value = '';
+    alertCustom("Succès", "PDF protégé par mot de passe généré.");
+  }
+
   function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   }
+  updateAuthMode();
 </script>
 </body>
 </html>
