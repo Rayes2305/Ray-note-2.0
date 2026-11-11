@@ -156,6 +156,9 @@
     .badge-agenda { background: #0d9488; }
     .badge-passed { background: #475569; }
 
+    .file-chip { background: rgba(255,255,255,0.06); border: 1px solid var(--card-border); border-radius: 6px; padding: 5px 9px; font-size: 0.78rem; color: #cbd5e1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+    .file-chip.edit { cursor: default; }
+    .file-chip .x { color: #f87171; cursor: pointer; font-weight: bold; }
     .images-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
     .note-img { width: 80px; height: 80px; object-fit: cover; border-radius: 6px; border: 1px solid var(--card-border); cursor: pointer; }
 
@@ -260,10 +263,12 @@
         <input type="text" id="noteTitle" placeholder="Titre / Identifiant">
         <textarea id="noteContent" rows="3" placeholder="Informations sensibles..."></textarea>
         
-        <label style="font-size: 0.8rem; color: var(--text-muted);">Joindre des images :</label>
-        <input type="file" id="noteImages" accept="image/*" multiple style="margin-top: 4px;">
+        <label style="font-size: 0.8rem; color: var(--text-muted);">Joindre des fichiers (images, PDF, texte, Word... 1,5 Mo max chacun) :</label>
+        <input type="file" id="noteFiles" multiple style="margin-top: 4px;">
+        <div id="editAttachments" class="images-grid"></div>
 
-        <button onclick="saveNote()" style="width: 100%; margin-top: 6px;">Enregistrer dans le Coffre</button>
+        <button id="saveNoteBtn" onclick="saveNote()" style="width: 100%; margin-top: 6px;">Enregistrer dans le Coffre</button>
+        <button id="cancelEditBtn" class="hidden" onclick="resetNoteForm()" style="width: 100%; margin-top: 6px; background: transparent; border: 1px solid var(--card-border); color: var(--text-muted);">Annuler la modification</button>
       </div>
 
       <div class="card">
@@ -560,6 +565,7 @@
   }
 
   function goToNotes(subCat) {
+    resetNoteForm();
     currentSubCat = subCat;
     isAgendaView = false;
     document.getElementById('viewCategories').classList.add('hidden');
@@ -833,35 +839,101 @@
     });
   }
 
+  let editingNoteId = null, editImages = [], editFiles = [];
+  const MAX_FILE = 1.5 * 1024 * 1024;
+
+  function currentNotesArr() { return vaultData.categories[currentMainCat].subcats[currentSubCat]; }
+
+  function resetNoteForm() {
+    editingNoteId = null; editImages = []; editFiles = [];
+    document.getElementById('noteTitle').value = '';
+    document.getElementById('noteContent').value = '';
+    document.getElementById('noteFiles').value = '';
+    document.getElementById('saveNoteBtn').textContent = 'Enregistrer dans le Coffre';
+    document.getElementById('cancelEditBtn').classList.add('hidden');
+    renderEditAttachments();
+  }
+
+  function renderEditAttachments() {
+    const box = document.getElementById('editAttachments');
+    box.innerHTML = '';
+    if (editingNoteId === null) return;
+    editImages.forEach((img, i) => {
+      box.innerHTML += `<span class="file-chip edit"><img src="${img}" style="width:28px;height:28px;object-fit:cover;border-radius:4px;"> Image ${i + 1} <span class="x" onclick="removeEditAttachment('img',${i})">✖</span></span>`;
+    });
+    editFiles.forEach((f, i) => {
+      box.innerHTML += `<span class="file-chip edit">📎 ${escapeHtml(f.name)} <span class="x" onclick="removeEditAttachment('file',${i})">✖</span></span>`;
+    });
+  }
+
+  function removeEditAttachment(kind, i) {
+    (kind === 'img' ? editImages : editFiles).splice(i, 1);
+    renderEditAttachments();
+  }
+
+  function editNote(noteId) {
+    const note = currentNotesArr().find(n => n.id === noteId);
+    if (!note) return;
+    editingNoteId = noteId;
+    editImages = [...(note.images || [])];
+    editFiles = [...(note.files || [])];
+    document.getElementById('noteTitle').value = note.title;
+    document.getElementById('noteContent').value = note.content;
+    document.getElementById('noteFiles').value = '';
+    document.getElementById('saveNoteBtn').textContent = '💾 Mettre à jour la note';
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+    renderEditAttachments();
+    const t = document.getElementById('noteTitle');
+    t.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    t.focus();
+  }
+
   async function saveNote() {
     const title = document.getElementById('noteTitle').value.trim();
     const content = document.getElementById('noteContent').value.trim();
-    const imgInput = document.getElementById('noteImages');
-
+    const fileInput = document.getElementById('noteFiles');
     if (!title) return alertCustom("Erreur", "Veuillez saisir un titre.");
 
-    let imagesList = [];
-    if (imgInput.files && imgInput.files.length > 0) {
-      for (let i = 0; i < imgInput.files.length; i++) {
-        const base64 = await readFileAsBase64(imgInput.files[i]);
-        imagesList.push(base64);
-      }
+    const newImages = [], newFiles = [];
+    for (const f of Array.from(fileInput.files || [])) {
+      if (f.size > MAX_FILE) return alertCustom("Fichier trop volumineux", `« ${f.name} » dépasse 1,5 Mo. Le coffre est stocké dans le téléphone, la taille est limitée.`);
+      const data = await readFileAsBase64(f);
+      if (f.type.startsWith('image/')) newImages.push(data);
+      else newFiles.push({ name: f.name, type: f.type || 'application/octet-stream', size: f.size, data });
     }
 
-    const newNote = {
-      id: Date.now(),
-      title,
-      content,
-      images: imagesList,
-      date: new Date().toLocaleDateString()
-    };
+    const arr = currentNotesArr();
+    let target, snapshot = null;
+    if (editingNoteId !== null) {
+      target = arr.find(n => n.id === editingNoteId);
+      snapshot = { ...target };
+      Object.assign(target, { title, content, images: [...editImages, ...newImages], files: [...editFiles, ...newFiles], modified: new Date().toLocaleDateString() });
+    } else {
+      target = { id: Date.now(), title, content, images: newImages, files: newFiles, date: new Date().toLocaleDateString() };
+      arr.push(target);
+    }
 
-    vaultData.categories[currentMainCat].subcats[currentSubCat].push(newNote);
-    await syncAndRefreshSub();
+    try {
+      await syncAndRefreshSub();
+    } catch (e) {
+      if (snapshot) Object.assign(target, snapshot); else arr.splice(arr.indexOf(target), 1);
+      return alertCustom("Stockage plein", "Impossible d'enregistrer : l'espace du coffre est plein. Supprimez des pièces jointes ou réduisez leur taille.");
+    }
+    resetNoteForm();
+  }
 
-    document.getElementById('noteTitle').value = '';
-    document.getElementById('noteContent').value = '';
-    imgInput.value = '';
+  function dataUrlToBlob(d) {
+    const [h, b] = d.split(',');
+    const mime = (h.match(/:(.*?);/) || [])[1] || 'application/octet-stream';
+    const bin = atob(b), u = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return new Blob([u], { type: mime });
+  }
+
+  async function openAttachment(noteId, idx) {
+    const note = currentNotesArr().find(n => n.id === noteId);
+    const f = note && note.files && note.files[idx];
+    if (f) await saveBlob(f.name, dataUrlToBlob(f.data));
   }
 
   function deleteNote(noteId) {
@@ -887,7 +959,7 @@
     container.innerHTML = '';
 
     const notes = vaultData.categories[currentMainCat].subcats[currentSubCat] || [];
-    const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query));
+    const filtered = notes.filter(n => n.title.toLowerCase().includes(query) || n.content.toLowerCase().includes(query) || (n.files || []).some(f => f.name.toLowerCase().includes(query)));
 
     if (filtered.length === 0) {
       container.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Aucun enregistrement dans cette section.</p>';
@@ -898,6 +970,14 @@
       const el = document.createElement('div');
       el.className = 'note-item';
       
+      let filesHtml = '';
+      if (note.files && note.files.length > 0) {
+        filesHtml = '<div class="images-grid">';
+        note.files.forEach((f, i) => {
+          filesHtml += `<span class="file-chip" onclick="openAttachment(${note.id}, ${i})">📎 ${escapeHtml(f.name)} <small>(${Math.max(1, Math.round(f.size / 1024))} Ko)</small> ⬇</span>`;
+        });
+        filesHtml += '</div>';
+      }
       let imgsHtml = '';
       if (note.images && note.images.length > 0) {
         imgsHtml = '<div class="images-grid">';
@@ -913,10 +993,10 @@
           <span class="badge">${escapeHtml(currentSubCat)}</span>
         </div>
         <p style="white-space: pre-wrap; margin-bottom: 8px; color: #cbd5e1;">${escapeHtml(note.content)}</p>
-        ${imgsHtml}
+        ${imgsHtml}${filesHtml}
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
-          <small style="color: var(--text-muted);">${note.date}</small>
-          <button class="danger tiny" style="opacity:1;" onclick="deleteNote(${note.id})">Supprimer</button>
+          <small style="color: var(--text-muted);">${note.date}${note.modified ? ' · modifié le ' + note.modified : ''}</small>
+          <span><button class="tiny" style="opacity:1; margin-right:6px;" onclick="editNote(${note.id})">✏️ Modifier</button><button class="danger tiny" style="opacity:1;" onclick="deleteNote(${note.id})">Supprimer</button></span>
         </div>
       `;
       container.appendChild(el);
@@ -1045,6 +1125,7 @@
             if (h > BAS - 30) { h = BAS - 30; w = h * im.w / im.h; }
             room(h + 4); doc.addImage(im.data, 'JPEG', L, y, w, h); y += h + 4;
           }
+          if ((n.files || []).length) para('Pièces jointes : ' + n.files.map(f => f.name).join(', '), 9, 'italic', [90, 90, 90], 5);
           y += 3; room(4); doc.setDrawColor(210); doc.line(L, y, L + W, y); y += 6;
         }
       }
