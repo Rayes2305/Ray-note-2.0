@@ -194,11 +194,14 @@
   <!-- AUTHENTIFICATION -->
   <div id="authScreen" class="card">
     <h2 style="margin-bottom: 8px; font-size: 1.2rem;">🔐 Authentification</h2>
-    <p style="color: var(--text-muted); margin-bottom: 14px; font-size: 0.9rem;">Entrez votre mot de passe maître.</p>
+    <p id="authSubtitle" style="color: var(--text-muted); margin-bottom: 14px; font-size: 0.9rem;">Entrez votre mot de passe maître.</p>
     <input type="password" id="masterPassword" placeholder="Mot de passe maître..." autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
     <input type="password" id="confirmPassword" class="hidden" placeholder="Confirmer le mot de passe..." autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
-    <p id="authHint" class="hidden" style="color: var(--text-muted); margin-bottom: 10px; font-size: 0.85rem;">Premier lancement : choisissez votre mot de passe maître (6 caractères minimum). Il est impossible à récupérer en cas d'oubli.</p>
-    <button id="unlockBtn" onclick="unlockVault()" style="width: 100%;">Déverrouiller le Coffre</button>
+    <p id="authHint" class="hidden" style="color: var(--text-muted); margin-bottom: 10px; font-size: 0.85rem;">Premier lancement : choisissez votre mot de passe maître (10 caractères minimum, une phrase est idéale). Il est impossible à récupérer en cas d'oubli.</p>
+    <input id="pinInput" class="hidden" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Code PIN (8 chiffres)" oninput="this.value=this.value.replace(/\D/g,'')">
+    <input id="pinConfirm" class="hidden" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Confirmer le code PIN" oninput="this.value=this.value.replace(/\D/g,'')">
+    <button id="unlockBtn" onclick="unlockVault()" style="width: 100%;">Continuer</button>
+    <button id="backBtn" class="hidden" onclick="authBack()" style="width: 100%; margin-top: 8px; background: transparent; border: 1px solid var(--card-border); color: var(--text-muted);">← Retour</button>
     <div id="authStatus" style="color: #ef4444; margin-top: 8px; font-size: 0.85rem;"></div>
   </div>
 
@@ -221,8 +224,15 @@
         <button class="secondary" onclick="document.getElementById('importFile').click()">📥 Importer</button>
         <input type="file" id="importFile" class="hidden" accept=".enc,.txt" onchange="importEncryptedFile(event)">
         <button onclick="exportPDF()">📄 Export PDF sécurisé</button>
+        <button onclick="document.getElementById('pwdPanel').classList.toggle('hidden')">🔑 Changer mot de passe / PIN</button>
       </div>
       <input type="password" id="pdfPassword" placeholder="Mot de passe du PDF (vide = mot de passe maître)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" style="margin-top:10px;">
+      <div id="pwdPanel" class="hidden" style="margin-top:10px;">
+        <input type="password" id="newPwd" placeholder="Nouveau mot de passe (vide = inchangé)" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
+        <input type="password" id="newPwd2" placeholder="Confirmer le nouveau mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
+        <input id="newPin" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" placeholder="Nouveau code PIN (vide = inchangé)" oninput="this.value=this.value.replace(/\D/g,'')">
+        <button onclick="changeMasterPassword()" style="width:100%;">Valider le changement</button>
+      </div>
     </div>
 
     <!-- FIL D'ARIANE -->
@@ -449,11 +459,11 @@
     if (pendingDeleteCallback) pendingDeleteCallback();
   }
 
-  async function getKey(password, salt) {
+  async function getKey(password, salt, iterations = 100000) {
     const enc = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]);
     return crypto.subtle.deriveKey(
-      { name: "PBKDF2", salt: salt, iterations: 100000, hash: "SHA-256" },
+      { name: "PBKDF2", salt: salt, iterations: iterations, hash: "SHA-256" },
       keyMaterial,
       { name: "AES-GCM", length: 256 },
       false,
@@ -464,62 +474,137 @@
   async function encryptData(dataObj, password) {
     const salt = crypto.getRandomValues(new Uint8Array(16));
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await getKey(password, salt);
+    const key = await getKey(password, salt, 300000);
     const enc = new TextEncoder();
     const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, enc.encode(JSON.stringify(dataObj)));
-    return { salt: Array.from(salt), iv: Array.from(iv), ciphertext: Array.from(new Uint8Array(encrypted)) };
+    return { pin: true, iterations: 300000, salt: Array.from(salt), iv: Array.from(iv), ciphertext: Array.from(new Uint8Array(encrypted)) };
   }
 
   async function decryptData(encryptedPayload, password) {
     const salt = new Uint8Array(encryptedPayload.salt);
     const iv = new Uint8Array(encryptedPayload.iv);
     const ciphertext = new Uint8Array(encryptedPayload.ciphertext);
-    const key = await getKey(password, salt);
+    const key = await getKey(password, salt, encryptedPayload.iterations || 100000);
     const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv: iv }, key, ciphertext);
     return JSON.parse(new TextDecoder().decode(decrypted));
   }
 
+  const byId = id => document.getElementById(id);
+  let currentPwd = null, currentPin = null, pendingPwd = null, authStep = 1, authMode = 'login';
+  const secretOf = (pw, pin) => pw + '\u0000' + pin;
+  const STORE = 'ray_notes_secure_v6';
+
+  function setAuthStep(step, mode) {
+    authStep = step; authMode = mode;
+    byId('masterPassword').classList.toggle('hidden', step === 2);
+    byId('confirmPassword').classList.toggle('hidden', !(step === 1 && mode === 'create'));
+    byId('authHint').classList.toggle('hidden', !(step === 1 && mode === 'create'));
+    byId('pinInput').classList.toggle('hidden', step === 1);
+    byId('pinConfirm').classList.toggle('hidden', !(step === 2 && mode !== 'login'));
+    byId('backBtn').classList.toggle('hidden', step === 1);
+    byId('unlockBtn').textContent = step === 1 ? 'Continuer' : ({ login: 'Déverrouiller le Coffre', create: 'Créer mon coffre', migrate: 'Activer le code PIN' })[mode];
+    byId('authSubtitle').textContent = step === 1
+      ? (mode === 'create' ? 'Créez votre coffre : choisissez un mot de passe maître.' : 'Entrez votre mot de passe maître.')
+      : ({ login: 'Entrez votre code PIN (8 chiffres).', create: 'Choisissez un code PIN de 8 chiffres. Il est impossible à récupérer en cas d\'oubli.', migrate: 'Sécurité renforcée : définissez un code PIN de 8 chiffres.' })[mode];
+    if (step === 2) setTimeout(() => byId('pinInput').focus(), 50);
+  }
+
+  function updateAuthMode() {
+    pendingPwd = null;
+    byId('pinInput').value = ''; byId('pinConfirm').value = '';
+    setAuthStep(1, localStorage.getItem(STORE) ? 'login' : 'create');
+  }
+
+  function authBack() {
+    vaultData = {};
+    byId('authStatus').textContent = '';
+    byId('masterPassword').value = '';
+    updateAuthMode();
+  }
+
+  function lockoutMsg() {
+    const wait = getFail().until - Date.now();
+    return wait > 0 ? `Trop d'essais. Réessayez dans ${Math.ceil(wait / 1000)} secondes.` : '';
+  }
+
+  function registerFail() {
+    const fl = getFail();
+    fl.count++;
+    if (fl.count >= 3) fl.until = Date.now() + Math.min(3600, 15 * Math.pow(2, fl.count - 3)) * 1000;
+    try { localStorage.setItem('ray_fail', JSON.stringify(fl)); } catch (e) {}
+    return fl.count >= 3 ? "Identifiants incorrects. Prochain essai bloqué temporairement." : "Identifiants incorrects ou données corrompues.";
+  }
+
+  function grantAccess(pin) {
+    currentPwd = pendingPwd; currentPin = pin; currentKey = secretOf(currentPwd, currentPin);
+    pendingPwd = null;
+    if (!vaultData.agenda) vaultData.agenda = [];
+    localStorage.removeItem('ray_fail');
+  }
+
   async function unlockVault() {
-    const pwd = document.getElementById('masterPassword').value;
-    const statusDiv = document.getElementById('authStatus');
-    statusDiv.textContent = "";
+    const st = byId('authStatus');
+    st.textContent = '';
+    if (authStep === 1) return authStep1(st);
+    return authStep2(st);
+  }
 
-    if (!pwd) { statusDiv.textContent = "Veuillez entrer votre mot de passe."; return; }
+  async function authStep1(st) {
+    const pwd = byId('masterPassword').value;
+    if (!pwd) { st.textContent = "Veuillez entrer votre mot de passe."; return; }
+    const raw = localStorage.getItem(STORE);
 
-    const rawStored = localStorage.getItem('ray_notes_secure_v6');
-    if (!rawStored) {
-      const conf = document.getElementById('confirmPassword').value;
-      if (pwd.length < 6) { statusDiv.textContent = "Le mot de passe doit contenir au moins 6 caractères."; return; }
-      if (pwd !== conf) { statusDiv.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+    if (!raw) {
+      if (pwd.length < 10) { st.textContent = "Le mot de passe doit contenir au moins 10 caractères (une phrase est idéale)."; return; }
+      if (pwd !== byId('confirmPassword').value) { st.textContent = "Les deux mots de passe ne sont pas identiques."; return; }
+      pendingPwd = pwd; setAuthStep(2, 'create'); return;
+    }
+
+    let info = null;
+    try { info = JSON.parse(raw); } catch (e) {}
+    if (info && info.pin) { pendingPwd = pwd; setAuthStep(2, 'login'); return; }
+
+    // Ancien coffre (sans PIN) : on le déchiffre, puis on demande de définir un PIN
+    const lock = lockoutMsg();
+    if (lock) { st.textContent = lock; return; }
+    try {
+      vaultData = await decryptData(info, pwd);
+      pendingPwd = pwd; setAuthStep(2, 'migrate');
+    } catch (e) { st.textContent = registerFail(); }
+  }
+
+  async function authStep2(st) {
+    const pin = byId('pinInput').value;
+    if (!/^\d{8}$/.test(pin)) { st.textContent = "Le code PIN doit contenir exactement 8 chiffres."; return; }
+
+    if (authMode === 'login') {
+      const lock = lockoutMsg();
+      if (lock) { st.textContent = lock; return; }
+      try {
+        vaultData = await decryptData(JSON.parse(localStorage.getItem(STORE)), secretOf(pendingPwd, pin));
+        grantAccess(pin); showVault();
+      } catch (e) {
+        st.textContent = registerFail();
+        byId('pinInput').value = '';
+      }
+      return;
+    }
+
+    if (pin !== byId('pinConfirm').value) { st.textContent = "Les deux codes PIN ne sont pas identiques."; return; }
+    if (authMode === 'create') {
       vaultData = {
         categories: { "Comptes": { subcats: { "Crypto": [], "Facebook": [] } }, "Réseau": { subcats: { "Wi-Fi": [] } } },
         agenda: []
       };
-      currentKey = pwd;
-      await syncAndRefreshSilent();
-      showVault();
-      return;
     }
-
-    try {
-      vaultData = await decryptData(JSON.parse(rawStored), pwd);
-      if (!vaultData.agenda) vaultData.agenda = [];
-      currentKey = pwd;
-      showVault();
-    } catch (e) {
-      statusDiv.textContent = "Mot de passe incorrect ou données corrompues.";
-    }
-  }
-
-  function updateAuthMode() {
-    const isNew = !localStorage.getItem('ray_notes_secure_v6');
-    document.getElementById('confirmPassword').classList.toggle('hidden', !isNew);
-    document.getElementById('authHint').classList.toggle('hidden', !isNew);
-    document.getElementById('unlockBtn').textContent = isNew ? 'Créer mon coffre' : 'Déverrouiller le Coffre';
+    grantAccess(pin);
+    await syncAndRefreshSilent();
+    showVault();
   }
 
   function showVault() {
-    document.getElementById('confirmPassword').value = '';
+    resetIdle();
+    ['confirmPassword', 'masterPassword', 'pinInput', 'pinConfirm'].forEach(id => document.getElementById(id).value = '');
     document.getElementById('authScreen').classList.add('hidden');
     document.getElementById('vaultContent').classList.remove('hidden');
     startAlarmChecker();
@@ -527,7 +612,8 @@
   }
 
   function lockVault() {
-    currentKey = null;
+    currentKey = null; currentPwd = null; currentPin = null; pendingPwd = null;
+    clearTimeout(idleTimer);
     vaultData = {};
     if (alarmInterval) clearInterval(alarmInterval);
     document.getElementById('masterPassword').value = '';
@@ -1089,7 +1175,7 @@
     if (currentKey === null) return;
     if (!window.jspdf) return alertCustom("Erreur", "Librairie PDF non chargée (connexion Internet requise).");
     const pwdField = document.getElementById('pdfPassword');
-    const pwd = pwdField.value || currentKey;
+    const pwd = pwdField.value || currentPwd;
 
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: 'a4', encryption: {
@@ -1152,6 +1238,40 @@
     await saveBlob('Ray_Notes_' + new Date().toISOString().slice(0, 10) + '.pdf', doc.output('blob'));
     pwdField.value = '';
     alertCustom("Succès", "PDF protégé par mot de passe généré.");
+  }
+
+  // ===== Sécurité renforcée =====
+  function getFail() {
+    try { return JSON.parse(localStorage.getItem('ray_fail')) || { count: 0, until: 0 }; }
+    catch (e) { return { count: 0, until: 0 }; }
+  }
+
+  const IDLE_MS = 2 * 60 * 1000;   // verrouillage après 2 minutes d'inactivité
+  let idleTimer = null;
+  function resetIdle() {
+    if (currentKey === null) return;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { if (currentKey !== null) lockVault(); }, IDLE_MS);
+  }
+  ['click', 'keydown', 'touchstart', 'scroll', 'input'].forEach(ev =>
+    document.addEventListener(ev, resetIdle, { passive: true, capture: true }));
+
+  async function changeMasterPassword() {
+    if (currentKey === null) return;
+    const a = byId('newPwd').value, b = byId('newPwd2').value, p = byId('newPin').value;
+    if (!a && !p) return alertCustom("Erreur", "Saisissez un nouveau mot de passe et/ou un nouveau code PIN.");
+    if (a && a.length < 10) return alertCustom("Erreur", "Le nouveau mot de passe doit contenir au moins 10 caractères.");
+    if (a && a !== b) return alertCustom("Erreur", "Les deux mots de passe ne sont pas identiques.");
+    if (p && !/^\d{8}$/.test(p)) return alertCustom("Erreur", "Le code PIN doit contenir exactement 8 chiffres.");
+    const old = { k: currentKey, w: currentPwd, n: currentPin };
+    if (a) currentPwd = a;
+    if (p) currentPin = p;
+    currentKey = secretOf(currentPwd, currentPin);
+    try { await syncAndRefreshSilent(); }
+    catch (e) { currentKey = old.k; currentPwd = old.w; currentPin = old.n; return alertCustom("Erreur", "Changement impossible."); }
+    ['newPwd', 'newPwd2', 'newPin'].forEach(id => byId(id).value = '');
+    byId('pwdPanel').classList.add('hidden');
+    alertCustom("Succès", "Identifiants modifiés. Refaites un export : vos anciennes sauvegardes gardent les anciens identifiants.");
   }
 
   function escapeHtml(text) {
