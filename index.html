@@ -192,6 +192,42 @@
   </div>
 
   <!-- AUTHENTIFICATION -->
+  <div id="activationScreen" class="card hidden">
+    <h2 id="actTitle" style="margin-bottom: 8px; font-size: 1.2rem;">🔑 Activation</h2>
+    <p style="color: var(--text-muted); margin-bottom: 10px; font-size: 0.9rem;">Envoyez cet identifiant à votre vendeur pour recevoir votre code d'activation.</p>
+    <input type="text" id="deviceIdView" readonly onclick="this.select()" style="text-align:center; font-weight:bold; letter-spacing:1px;">
+    <textarea id="activationCode" rows="3" placeholder="Collez ici votre code d'activation..." autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true"></textarea>
+    <button onclick="activateLicense()" style="width: 100%;">Activer</button>
+    <div id="activationStatus" style="color: #ef4444; margin-top: 8px; font-size: 0.85rem;"></div>
+  </div>
+
+  <div id="adminScreen" class="hidden" style="position:fixed; inset:0; z-index:100; overflow:auto; padding:16px; background:#0f172a;">
+    <div class="card" style="max-width:640px; margin:0 auto;">
+      <div id="adminLogin">
+        <h2 style="margin-bottom: 12px; font-size: 1.1rem;">Administration</h2>
+        <input type="password" id="admPwd" placeholder="Mot de passe" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
+        <input type="password" id="admPin" inputmode="numeric" maxlength="8" placeholder="Code PIN" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true" oninput="this.value=this.value.replace(/\D/g,'')">
+        <button onclick="adminLogin()" style="width:100%;">Ouvrir</button>
+        <button onclick="closeAdmin()" style="width:100%; margin-top:8px; background:transparent; border:1px solid var(--card-border); color:var(--text-muted);">Fermer</button>
+        <div id="adminStatus" style="color:#ef4444; margin-top:8px; font-size:0.85rem;"></div>
+      </div>
+      <div id="adminPanel" class="hidden">
+        <h2 style="margin-bottom: 12px; font-size: 1.1rem;">Administration</h2>
+        <button id="adminSelf" class="hidden" onclick="adminActivateSelf()" style="width:100%; margin-bottom:12px; background:#166534;">🔓 Activer cet appareil (sans code)</button>
+        <input type="text" id="admName" placeholder="Nom du client" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
+        <input type="text" id="admDevice" placeholder="Identifiant du téléphone du client" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" data-lpignore="true">
+        <select id="admDays" style="width:100%;padding:10px;margin-bottom:10px;background:#0f172a;color:#f8fafc;border:1px solid var(--card-border);border-radius:6px;"><option value="0">Licence illimitée</option><option value="30">30 jours</option><option value="90">90 jours</option><option value="365" selected>1 an</option></select>
+        <button onclick="adminGenerate()" style="width:100%;">Générer le code</button>
+        <textarea id="admCode" rows="4" readonly onclick="this.select()" style="margin-top:10px;"></textarea>
+        <button onclick="adminCopy()" style="width:100%;">Copier le code</button>
+        <div id="admMsg" style="color:#4ade80; margin:8px 0; font-size:0.85rem;"></div>
+        <h3 style="font-size:1rem; margin:12px 0 8px;">Clients</h3>
+        <div id="admClients"></div>
+        <button onclick="closeAdmin()" style="width:100%; margin-top:12px; background:transparent; border:1px solid var(--card-border); color:var(--text-muted);">Fermer</button>
+      </div>
+    </div>
+  </div>
+
   <div id="authScreen" class="card">
     <h2 style="margin-bottom: 8px; font-size: 1.2rem;">🔐 Authentification</h2>
     <p id="authSubtitle" style="color: var(--text-muted); margin-bottom: 14px; font-size: 0.9rem;">Entrez votre mot de passe maître.</p>
@@ -342,7 +378,7 @@
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="jspdf.umd.min.js" onerror="var x=document.createElement('script');x.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';document.head.appendChild(x);"></script>
 <script>
   let vaultData = {
     categories: {
@@ -613,6 +649,7 @@
 
   function lockVault() {
     currentKey = null; currentPwd = null; currentPin = null; pendingPwd = null;
+    closeAdmin();
     clearTimeout(idleTimer);
     vaultData = {};
     if (alarmInterval) clearInterval(alarmInterval);
@@ -1125,15 +1162,21 @@
     const file = event.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = async function(e) {
-      try {
-        JSON.parse(e.target.result);
-        localStorage.setItem('ray_notes_secure_v6', e.target.result);
-        alertCustom("Succès", "Sauvegarde importée avec succès. Saisissez votre mot de passe.");
-        lockVault();
-      } catch (err) {
-        alertCustom("Erreur", "Fichier de sauvegarde invalide.");
+    reader.onload = function(e) {
+      const text = String(e.target.result || '').replace(/^\uFEFF/, '').trim();
+      let obj = null;
+      try { obj = JSON.parse(text); } catch (err) {}
+      event.target.value = '';
+      if (!obj || !Array.isArray(obj.salt) || !Array.isArray(obj.iv) || !Array.isArray(obj.ciphertext)) {
+        const hint = !text ? "Le fichier est vide."
+          : (/^<|^%PDF/.test(text) ? "Ce n'est pas une sauvegarde .enc.txt (page web ou PDF)."
+          : "Le contenu n'est pas une sauvegarde Ray Notes complète (fichier modifié, coupé ou autre type de fichier).");
+        alertCustom("Erreur", `Fichier de sauvegarde invalide : « ${file.name} » (${file.size} octets). ${hint}`);
+        return;
       }
+      localStorage.setItem(STORE, text);
+      alertCustom("Succès", "Sauvegarde importée avec succès. Saisissez votre mot de passe (puis votre code PIN).");
+      lockVault();
     };
     reader.readAsText(file);
   }
@@ -1274,10 +1317,183 @@
     alertCustom("Succès", "Identifiants modifiés. Refaites un export : vos anciennes sauvegardes gardent les anciens identifiants.");
   }
 
+  // ===== Licence / Activation =====
+  // >>> CONFIG LICENCE : remplacez ces 2 lignes par celles générées par admin-setup.html
+  const LICENSE_PUBKEY = {"crv":"P-256","ext":true,"key_ops":["verify"],"kty":"EC","x":"gsE4sGXZuqjD4nUKUJa0JV1fcnHQsAWucaYmni66cuw","y":"zEdcNiG1BRI6uzsQbr4ydY2W5jtUmsIukL2KQHfUP34"};
+const ADMIN_BLOB = "eyJpdCI6MzAwMDAwLCJzYWx0IjpbMjIxLDI0MywxNzQsMTgsMjQ2LDE5MywyMSwxODYsNTYsMTA0LDI0OCwxODksMTQsMTExLDgxLDE5NV0sIml2IjpbMjAyLDE4MywxOSw3MSw0NiwyNDcsMTUzLDg4LDE5NiwxMjksNTgsOV0sImN0IjpbMTUxLDExOCw4NSwyNTUsMTUwLDQxLDk5LDE3OSwxNjcsNzYsNTcsMjM0LDIsNzAsMjM1LDIxMywyNDksMzMsMTcsOTQsMjE4LDExNSwxODEsMjMxLDEzNCwxNzIsOTIsMTQyLDksNzQsMTkwLDI2LDI0Niw3Miw5NCw2NiwyNTMsNjAsMjEsNTgsMTQ0LDIxNSw5OSwyMDgsMTYxLDEwNSwxMzQsMTQsNTIsMTE4LDIzMCw0OCwyMjksOTAsMjUxLDYwLDE0MSwxNDMsMjA2LDE0OCw4OCwxNjAsMTA4LDI2LDIxMyw3MCwxMjYsNTIsNzEsOTQsMTkwLDY3LDUwLDUyLDIwLDc5LDIxOCwxNzcsMjI0LDM1LDE1MCwxMTAsMjU1LDE0NSwyNiw5NCwyMTMsODYsNzAsMTQsMjIzLDEzNiwyNDYsMTExLDEwNSwyMiw5NiwxOTMsMjQzLDI0MiwzMCwxMjEsMTY2LDE1OSwxMTAsMTQ5LDEyNSwxNjEsMTcsMTMzLDAsNjcsMTgwLDI0Myw1NiwxNjYsMTE2LDE5NywzOCw4MiwyNCwxMjAsOTEsMTI1LDIwMiwxNjcsMTkzLDY3LDIzNSwxNiw0NCwxMTQsMTA0LDE3NywxNDMsNTcsMTk5LDQsMTAwLDQxLDE2NywyMzgsNzQsMjM2LDIyNSw1MywxNjYsMjA3LDc2LDgzLDUwLDIyNiw0NywzMiw3NiwyMjksMTc0LDE2OCwxMzQsMTExLDYwLDE3MCwxLDI0MiwxMTEsOTksMjUxLDY2LDkyLDIyMiw5MiwyMTEsMjI5LDQ5LDIyMSw4LDIwMywxNjUsMTMzLDU1LDg5LDE5NSwxOTcsMjAwLDIwNiwxMDIsMTk5LDgxLDI4LDU4LDE2OCw0NiwyMjcsMTQ3LDIyMywyNTEsNjEsMzMsMTY3LDE0NywxMTYsMTM4LDI1LDEyLDUwLDIwMSwzOSwwLDc2LDU2LDE5MSwxNCw0LDIzOCwxNjYsMTIyLDAsMTE2LDE3NCwyNTIsMjUsMTAxXX0=";
+  // <<<
+
+  // ==PURE-START==
+  const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = t => { t = t.replace(/-/g, '+').replace(/_/g, '/'); while (t.length % 4) t += '='; return Uint8Array.from(atob(t), c => c.charCodeAt(0)); };
+  const normId = x => String(x || '').replace(/[^0-9a-zA-Z]/g, '').toUpperCase();
+  const fmtId = id => id.replace(/(.{4})(?=.)/g, '$1-');
+
+  async function verifyLicense(code, pub = LICENSE_PUBKEY, dev = getDeviceId()) {
+    try {
+      const [tag, p, sg] = String(code).replace(/\s+/g, '').split('.');
+      if (tag !== 'RN1' || !p || !sg) return { ok: false, msg: "Code invalide." };
+      const key = await crypto.subtle.importKey('jwk', pub, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+      if (!(await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, unb64u(sg), unb64u(p)))) return { ok: false, msg: "Code invalide." };
+      const data = JSON.parse(new TextDecoder().decode(unb64u(p)));
+      if (data.d !== dev) return { ok: false, msg: "Ce code n'est pas destiné à ce téléphone." };
+      if (data.e && Date.now() > data.e) return { ok: false, msg: "Ce code a expiré." };
+      return { ok: true, data };
+    } catch (e) { return { ok: false, msg: "Code invalide." }; }
+  }
+  // ==PURE-END==
+
+  function getDeviceId() {
+    let id = '';
+    try { if (window.AndroidDevice) id = AndroidDevice.getId(); } catch (e) {}
+    if (!id) {
+      id = localStorage.getItem('ray_dev') || Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2, '0')).join('');
+      try { localStorage.setItem('ray_dev', id); } catch (e) {}
+    }
+    return normId(id);
+  }
+
+  async function initLicense() {
+    document.querySelector('.brand-subtitle').addEventListener('click', secretTap);
+    byId('actTitle').addEventListener('click', secretTapAct);
+    if (!LICENSE_PUBKEY) { updateAuthMode(); return; }
+    byId('authScreen').classList.add('hidden');
+    byId('deviceIdView').value = fmtId(getDeviceId());
+    const stored = localStorage.getItem('ray_license');
+    if (stored && (await verifyLicense(stored)).ok) { byId('authScreen').classList.remove('hidden'); updateAuthMode(); return; }
+    byId('activationScreen').classList.remove('hidden');
+  }
+
+  async function activateLicense() {
+    const code = byId('activationCode').value.replace(/\s+/g, '');
+    const r = await verifyLicense(code);
+    if (!r.ok) { byId('activationStatus').textContent = r.msg; return; }
+    localStorage.setItem('ray_license', code);
+    byId('activationScreen').classList.add('hidden');
+    byId('authScreen').classList.remove('hidden');
+    updateAuthMode();
+  }
+
+  // ===== Administration cachée (3 appuis rapides sur le sous-titre, coffre ouvert) =====
+  let tapCount = 0, tapTimer = null, admSecret = null, admKey = null, admClients = [];
+  function secretTap() {
+    if (currentKey === null) return;   // uniquement une fois connecté au coffre
+    tapCount++; clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 900);
+    if (tapCount >= 3) { tapCount = 0; openAdmin(); }
+  }
+  function secretTapAct() {   // 3 appuis sur le titre « Activation » : accès propriétaire
+    tapCount++; clearTimeout(tapTimer);
+    tapTimer = setTimeout(() => { tapCount = 0; }, 900);
+    if (tapCount >= 3) { tapCount = 0; openAdmin(); }
+  }
+  async function openAdmin() {
+    byId('adminScreen').classList.remove('hidden');
+    byId('adminLogin').classList.remove('hidden');
+    byId('adminPanel').classList.add('hidden');
+    byId('adminStatus').textContent = '';
+    // Si les identifiants admin sont les mêmes que ceux du coffre, ouverture directe
+    if (ADMIN_BLOB && currentKey !== null) { try { await adminUnlock(currentPwd, currentPin); } catch (e) {} }
+  }
+  function closeAdmin() {
+    admSecret = null; admKey = null; admClients = [];
+    ['admPwd', 'admPin', 'admCode', 'admName', 'admDevice'].forEach(id => byId(id).value = '');
+    byId('admClients').innerHTML = ''; byId('admMsg').textContent = '';
+    byId('adminScreen').classList.add('hidden');
+  }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) closeAdmin(); });
+
+  async function adminUnlock(pwd, pin) {
+      const blob = JSON.parse(atob(ADMIN_BLOB));
+      const key = await getKey(secretOf(pwd, pin), new Uint8Array(blob.salt), blob.it);
+      const jwk = JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: new Uint8Array(blob.iv) }, key, new Uint8Array(blob.ct))));
+      admKey = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+      admSecret = secretOf(pwd, pin);
+      const raw = localStorage.getItem('ray_admin_clients');
+      admClients = raw ? (await decryptData(JSON.parse(raw), admSecret)).list : [];
+      localStorage.removeItem('ray_fail_adm');
+      byId('admPwd').value = ''; byId('admPin').value = '';
+      byId('adminLogin').classList.add('hidden'); byId('adminPanel').classList.remove('hidden');
+      renderClients();
+      byId('adminSelf').classList.toggle('hidden', byId('activationScreen').classList.contains('hidden'));
+  }
+
+  async function adminActivateSelf() {
+    if (!admKey) return;
+    const payload = new TextEncoder().encode(JSON.stringify({ d: getDeviceId(), e: 0 }));
+    const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, admKey, payload);
+    localStorage.setItem('ray_license', 'RN1.' + b64u(payload) + '.' + b64u(sig));
+    closeAdmin();
+    byId('activationScreen').classList.add('hidden');
+    byId('authScreen').classList.remove('hidden');
+    updateAuthMode();
+  }
+
+  async function adminLogin() {
+    const st = byId('adminStatus'); st.textContent = '';
+    if (!ADMIN_BLOB) { st.textContent = "Non configuré."; return; }
+    let f; try { f = JSON.parse(localStorage.getItem('ray_fail_adm')) || { count: 0, until: 0 }; } catch (e) { f = { count: 0, until: 0 }; }
+    const wait = f.until - Date.now();
+    if (wait > 0) { st.textContent = `Réessayez dans ${Math.ceil(wait / 1000)} secondes.`; return; }
+    try {
+      await adminUnlock(byId('admPwd').value, byId('admPin').value);
+    } catch (e) {
+      f.count++;
+      if (f.count >= 3) f.until = Date.now() + Math.min(3600, 15 * Math.pow(2, f.count - 3)) * 1000;
+      try { localStorage.setItem('ray_fail_adm', JSON.stringify(f)); } catch (x) {}
+      st.textContent = "Identifiants incorrects.";
+    }
+  }
+
+  async function saveClients() {
+    localStorage.setItem('ray_admin_clients', JSON.stringify(await encryptData({ list: admClients }, admSecret)));
+  }
+
+  async function adminGenerate() {
+    const msg = byId('admMsg'); msg.style.color = '#f87171';
+    if (!admKey) return;
+    const id = normId(byId('admDevice').value);
+    if (id.length < 8) { msg.textContent = "Identifiant du téléphone invalide."; return; }
+    const days = parseInt(byId('admDays').value, 10);
+    const exp = days ? Date.now() + days * 86400000 : 0;
+    const payload = new TextEncoder().encode(JSON.stringify({ d: id, e: exp }));
+    const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, admKey, payload);
+    const code = 'RN1.' + b64u(payload) + '.' + b64u(sig);
+    byId('admCode').value = code;
+    admClients.unshift({ name: byId('admName').value.trim() || 'Client', id, exp, created: Date.now(), code });
+    await saveClients(); renderClients();
+    msg.style.color = '#4ade80'; msg.textContent = "Code généré. Envoyez-le au client (copier-coller).";
+  }
+
+  async function copyText(t) {
+    try { await navigator.clipboard.writeText(t); return true; } catch (e) {}
+    const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    ta.remove(); return ok;
+  }
+  async function adminCopy() {
+    const ok = await copyText(byId('admCode').value);
+    byId('admMsg').style.color = ok ? '#4ade80' : '#f87171';
+    byId('admMsg').textContent = ok ? "Code copié." : "Copie impossible : appuyez longuement sur le code pour le copier.";
+  }
+  async function adminCopyClient(i) { await copyText(admClients[i].code); byId('admMsg').style.color = '#4ade80'; byId('admMsg').textContent = "Code copié."; }
+  async function adminDelClient(i) { admClients.splice(i, 1); await saveClients(); renderClients(); }
+
+  function renderClients() {
+    const box = byId('admClients');
+    if (!admClients.length) { box.innerHTML = '<p style="color: var(--text-muted);">Aucun client enregistré.</p>'; return; }
+    box.innerHTML = admClients.map((c, i) => `
+      <div class="note-item"><strong>${escapeHtml(c.name)}</strong><br>
+        <small style="color: var(--text-muted);">${fmtId(c.id)} · ${c.exp ? 'expire le ' + new Date(c.exp).toLocaleDateString('fr-FR') : 'illimitée'} · émis le ${new Date(c.created).toLocaleDateString('fr-FR')}</small><br>
+        <button class="tiny" style="opacity:1; margin-top:6px;" onclick="adminCopyClient(${i})">Copier le code</button>
+        <button class="danger tiny" style="opacity:1; margin-top:6px;" onclick="adminDelClient(${i})">Retirer</button>
+      </div>`).join('');
+  }
+
   function escapeHtml(text) {
     return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m]));
   }
-  updateAuthMode();
+  initLicense();
 </script>
 </body>
 </html>
